@@ -1,0 +1,39 @@
+{
+  "name": "tiktok-live-recorder",
+  "version": "7.0.0",
+  "description": "A TypeScript tool for recording live TikTok sessions",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "dev": "ts-node src/main.ts",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.10",
+    "axios": "^1.6.0",
+    "commander": "^11.0.0",
+    "crypto": "^1.0.1",
+    "fluent-ffmpeg": "^2.1.2",
+    "fs-extra": "^11.1.1",
+    "node-telegram-bot-api": "^0.63.0"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.0",
+    "@types/fluent-ffmpeg": "^2.1.24",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^20.0.0",
+    "@types/node-telegram-bot-api": "^0.64.10",
+    "rimraf": "^5.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "tiktok",
+    "live",
+    "recorder",
+    "streaming"
+  ],
+  "author": "Yoganataa",
+  "license": "MIT"
+}
