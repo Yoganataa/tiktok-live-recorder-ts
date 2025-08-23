@@ -54,9 +54,10 @@ export class TikTokRecorder {
     // Upload Settings
     this.useTelegram = useTelegram;
 
-    // If proxy is provided, set up the HTTP client without the proxy
+    // If proxy is provided, also setup client without proxy for certain operations
     if (proxy) {
-      this.tiktok = new TikTokAPI(undefined, cookies);
+      // Keep the proxy-enabled client for most operations
+      this.tiktok = new TikTokAPI(proxy, cookies);
     }
   }
 
@@ -113,8 +114,10 @@ export class TikTokRecorder {
   private async automaticMode(): Promise<void> {
     while (true) {
       try {
-        this.roomId = await this.tiktok.getRoomIdFromUser(this.user!);
-        await this.manualMode();
+        if (this.user) {
+          this.roomId = await this.tiktok.getRoomIdFromUser(this.user);
+          await this.manualMode();
+        }
       } catch (error) {
         if (error instanceof UserLiveError) {
           logger.info(error.message);
@@ -125,7 +128,8 @@ export class TikTokRecorder {
           logger.info(`Waiting ${this.automaticInterval} minutes before recheck\n`);
           await this.sleep(this.automaticInterval * TimeOut.ONE_MINUTE * 1000);
         } else {
-          logger.error(`Unexpected error: ${error}\n`);
+          logger.error(`Connection error: ${Error.CONNECTION_CLOSED_AUTOMATIC}`);
+          await this.sleep(TimeOut.CONNECTION_CLOSED * TimeOut.ONE_MINUTE * 1000);
         }
       }
     }
@@ -142,7 +146,7 @@ export class TikTokRecorder {
           const existingProcess = activeRecordings.get(follower);
           if (existingProcess && !existingProcess.killed) {
             continue;
-          } else if (existingProcess && existingProcess.killed) {
+          } else if (existingProcess?.exitCode !== null) {
             logger.info(`Recording of @${follower} finished.`);
             activeRecordings.delete(follower);
           }
@@ -156,9 +160,13 @@ export class TikTokRecorder {
 
             logger.info(`@${follower} is live. Starting recording...`);
 
-            const process = spawn('node', ['dist/main.js', '-user', follower, '-mode', 'manual'], {
-              detached: true,
-              stdio: 'ignore'
+            const process = spawn('node', [
+              path.join(__dirname, '..', 'main.js'),
+              '-user', follower,
+              '-mode', 'manual'
+            ], {
+              detached: false,
+              stdio: 'pipe'
             });
 
             activeRecordings.set(follower, process);
@@ -172,7 +180,7 @@ export class TikTokRecorder {
 
         console.log();
         const delay = this.automaticInterval * TimeOut.ONE_MINUTE;
-        logger.info(`Waiting ${delay} minutes for the next check...`);
+        logger.info(`Waiting ${delay} seconds for the next check...`);
         await this.sleep(delay * 1000);
 
       } catch (error) {
@@ -181,7 +189,8 @@ export class TikTokRecorder {
           logger.info(`Waiting ${this.automaticInterval} minutes before recheck\n`);
           await this.sleep(this.automaticInterval * TimeOut.ONE_MINUTE * 1000);
         } else {
-          logger.error(`Unexpected error: ${error}\n`);
+          logger.error(`Connection error: ${Error.CONNECTION_CLOSED_AUTOMATIC}`);
+          await this.sleep(TimeOut.CONNECTION_CLOSED * TimeOut.ONE_MINUTE * 1000);
         }
       }
     }
@@ -193,9 +202,10 @@ export class TikTokRecorder {
       throw new LiveNotFound(TikTokError.RETRIEVE_LIVE_URL);
     }
 
-    const currentDate = new Date().toISOString()
-      .replace(/:/g, '-')
-      .replace(/\./g, '_')
+    const currentDate = new Date()
+      .toISOString()
+      .replace(/[:.]/g, '-')
+      .replace('T', '_')
       .substring(0, 19);
 
     let outputPath = this.output || '';
@@ -206,92 +216,91 @@ export class TikTokRecorder {
     const output = `${outputPath}TK_${user}_${currentDate}_flv.mp4`;
 
     if (this.duration) {
-      logger.info(`Started recording for ${this.duration} seconds `);
+      logger.info(`Started recording for ${this.duration} seconds`);
     } else {
       logger.info("Started recording...");
     }
 
     const bufferSize = 512 * 1024; // 512 KB buffer
     let buffer = Buffer.alloc(0);
+    let stopRecording = false;
 
     logger.info("[PRESS CTRL + C ONCE TO STOP]");
 
-    return new Promise(async (resolve, reject) => {
+    // Handle Ctrl+C
+    const handleInterrupt = () => {
+      logger.info("Recording stopped by user.");
+      stopRecording = true;
+    };
+
+    process.on('SIGINT', handleInterrupt);
+
+    try {
       const writeStream = fs.createWriteStream(output);
-      let stopRecording = false;
       const startTime = Date.now();
 
-      // Handle Ctrl+C
-      const handleInterrupt = () => {
-        logger.info("Recording stopped by user.");
-        stopRecording = true;
-      };
+      while (!stopRecording) {
+        try {
+          if (!(await this.tiktok.isRoomAlive(roomId))) {
+            logger.info("User is no longer live. Stopping recording.");
+            break;
+          }
 
-      process.on('SIGINT', handleInterrupt);
+          const streamGen = this.tiktok.downloadLiveStream(liveUrl);
+          const streamIterator = await streamGen;
+          
+          for await (const chunk of streamIterator) {
+            if (stopRecording) break;
+            
+            buffer = Buffer.concat([buffer, chunk]);
+            
+            if (buffer.length >= bufferSize) {
+              writeStream.write(buffer);
+              buffer = Buffer.alloc(0);
+            }
 
-      try {
-        while (!stopRecording) {
-          try {
-            if (!(await this.tiktok.isRoomAlive(roomId))) {
-              logger.info("User is no longer live. Stopping recording.");
+            const elapsed = Date.now() - startTime;
+            if (this.duration && elapsed >= this.duration * 1000) {
+              stopRecording = true;
               break;
             }
-
-            const streamGen = this.tiktok.downloadLiveStream(liveUrl);
-            
-            for await (const chunk of streamGen) {
-              buffer = Buffer.concat([buffer, chunk]);
-              
-              if (buffer.length >= bufferSize) {
-                writeStream.write(buffer);
-                buffer = Buffer.alloc(0);
-              }
-
-              const elapsed = Date.now() - startTime;
-              if (this.duration && elapsed >= this.duration * 1000) {
-                stopRecording = true;
-                break;
-              }
-
-              if (stopRecording) break;
-            }
-
-          } catch (error) {
-            logger.error(`Stream error: ${error}`);
-            await this.sleep(2000);
-          }
-        }
-
-        if (buffer.length > 0) {
-          writeStream.write(buffer);
-        }
-
-        writeStream.end();
-
-        writeStream.on('finish', async () => {
-          logger.info(`Recording finished: ${output}\n`);
-          
-          try {
-            await VideoManagement.convertFlvToMp4(output);
-            
-            if (this.useTelegram) {
-              const telegram = new Telegram();
-              await telegram.upload(output.replace('_flv.mp4', '.mp4'));
-            }
-          } catch (error) {
-            logger.error(`Post-processing error: ${error}`);
           }
 
-          process.off('SIGINT', handleInterrupt);
-          resolve();
-        });
-
-      } catch (error) {
-        process.off('SIGINT', handleInterrupt);
-        writeStream.destroy();
-        reject(error);
+        } catch (streamError) {
+          logger.error(`Stream error: ${streamError}`);
+          await this.sleep(2000);
+        }
       }
-    });
+
+      if (buffer.length > 0) {
+        writeStream.write(buffer);
+      }
+
+      writeStream.end();
+
+      await new Promise<void>((resolve) => {
+        writeStream.on('finish', resolve);
+      });
+
+      logger.info(`Recording finished: ${output}\n`);
+      
+      try {
+        await VideoManagement.convertFlvToMp4(output);
+        
+        if (this.useTelegram) {
+          const telegram = new Telegram();
+          await telegram.upload(output.replace('_flv.mp4', '.mp4'));
+        }
+      } catch (error) {
+        logger.error(`Post-processing error: ${error}`);
+      }
+
+    } catch (error) {
+      logger.error(`Recording error: ${error}`);
+      throw error;
+    } finally {
+      process.off('SIGINT', handleInterrupt);
+    }
   }
 
   private async checkCountryBlacklisted(): Promise<void> {

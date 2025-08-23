@@ -35,10 +35,12 @@ export enum Error {
   CONNECTION_CLOSED_AUTOMATIC = "Connection broken by the server. Try again after delay of 2 minutes"
 }
 
-const VERSION = 7.0;
+import * as packageJson from '../../package.json';
+
+const VERSION = packageJson.version;
 
 export const Info: {
-  VERSION: number;
+  VERSION: string;
   NEW_FEATURES: string[];
   BANNER: string;
 } = {
@@ -48,10 +50,11 @@ export const Info: {
   ],
   BANNER: `
 
-  _____ _ _   _____    _     _    _           ___                   _         
- |_   _(_) |_|_   _|__| |__ | |  (_)_ _____  | _ \\___ __ ___ _ _ __| |___ _ _ 
-   | | | | / / | |/ _ \\ / / | |__| \\ V / -_) |   / -_) _/ _ \\ '_/ _\` / -_) '_|
-   |_| |_|_\\_\\ |_|\\___/_\\_\\ |____|_|\\_/\\___| |_|_\\___\\__\\___/_| \\__,_\\___|_| 
+ ████████ ███████ ████████  ██████  ██   ██
+    ██    ██         ██    ██    ██ ██  ██ 
+    ██    ███████    ██    ██    ██ █████  
+    ██         ██    ██    ██    ██ ██  ██ 
+    ██    ███████    ██     ██████  ██   ██
 
    V${VERSION}
 `

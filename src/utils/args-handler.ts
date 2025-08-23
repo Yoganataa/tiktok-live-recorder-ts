@@ -33,7 +33,7 @@ export function parseArgs(): ParsedArgs {
     .option('-output <output>', 'Specify the output directory where recordings will be saved.')
     .option('-duration <duration>', 'Specify the duration in seconds to record the live session [Default: None].')
     .option('-telegram', 'Activate the option to upload the video to Telegram at the end of the recording.')
-    .option('-no-update-check', 'Disable the check for updates before running the program.');
+    .option('--no-update-check', 'Disable the check for updates before running the program.');
 
   program.parse();
 
@@ -43,13 +43,13 @@ export function parseArgs(): ParsedArgs {
     url: options.Url,
     user: options.User,
     roomId: options.Room_id,
-    mode: options.Mode,
-    automaticInterval: parseInt(options.Automatic_interval),
+    mode: options.Mode || 'manual',
+    automaticInterval: parseInt(options.Automatic_interval || '5'),
     proxy: options.Proxy,
     output: options.Output,
     duration: options.Duration ? parseInt(options.Duration) : undefined,
     telegram: options.Telegram || false,
-    updateCheck: !options.NoUpdateCheck
+    updateCheck: options.updateCheck !== false
   };
 }
 
@@ -73,7 +73,7 @@ export function validateAndParseArgs(): [ParsedArgs, Mode] {
 
   if (args.user) {
     if (typeof args.user === 'string') {
-      const users = args.user.split(',').map(u => u.replace('@', '').trim()).filter(u => u);
+      const users = args.user.split(',').map(u => u.replace(/^@/, '').trim()).filter(u => u);
       args.user = users.length === 1 ? users[0] : users;
     }
   }
@@ -86,8 +86,19 @@ export function validateAndParseArgs(): [ParsedArgs, Mode] {
     throw new ArgsParseError("The provided URL does not appear to be a valid TikTok live URL.");
   }
 
-  if (args.automaticInterval < 1) {
+  // Validate numeric inputs
+  if (isNaN(args.automaticInterval) || args.automaticInterval < 1) {
     throw new ArgsParseError("Incorrect automatic_interval value. Must be one minute or more.");
+  }
+
+  if (args.duration !== undefined && (isNaN(args.duration) || args.duration <= 0)) {
+    throw new ArgsParseError("Duration must be a positive number of seconds.");
+  }
+
+  // Check for conflicting parameters
+  const providedParams = [args.user, args.roomId, args.url].filter(p => p).length;
+  if (providedParams > 1 && (typeof args.user === 'string' || !args.user)) {
+    throw new ArgsParseError("Please provide only one among username, room ID, or URL.");
   }
 
   let mode: Mode;

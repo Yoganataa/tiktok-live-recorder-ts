@@ -42,7 +42,7 @@ export class Telegram {
       logger.info("Uploading video on Telegram... This may take a while depending on the file size.");
 
       await this.bot.sendDocument(this.chatId, filePath, {
-        caption: '🎥 <b>Video recorded via <a href="https://github.com/Michele0303/tiktok-live-recorder">TikTok Live Recorder</a></b>',
+        caption: '🎥 <b>Video recorded via <a href="https://github.com/Yoganataa/tiktok-live-recorder">TikTok Live Recorder</a></b>',
         parse_mode: 'HTML'
       });
 

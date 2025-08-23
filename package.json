@@ -1,39 +1,52 @@
 {
   "name": "tiktok-live-recorder",
-  "version": "7.0.0",
+  "version": "1.0.1-alpha",
   "description": "A TypeScript tool for recording live TikTok sessions",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/main.js",
     "dev": "ts-node src/main.ts",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "watch": "tsc --watch",
+    "test": "echo \"No tests specified\" && exit 0"
   },
   "dependencies": {
-    "adm-zip": "^0.5.10",
-    "axios": "^1.6.0",
-    "commander": "^11.0.0",
-    "crypto": "^1.0.1",
+    "adm-zip": "^0.5.16",
+    "axios": "^1.6.2",
+    "commander": "^11.1.0",
     "fluent-ffmpeg": "^2.1.2",
     "fs-extra": "^11.1.1",
-    "node-telegram-bot-api": "^0.63.0"
+    "node-telegram-bot-api": "^0.64.0"
   },
   "devDependencies": {
-    "@types/adm-zip": "^0.5.0",
+    "@types/adm-zip": "^0.5.7",
     "@types/fluent-ffmpeg": "^2.1.24",
     "@types/fs-extra": "^11.0.4",
-    "@types/node": "^20.0.0",
+    "@types/node": "^20.10.0",
     "@types/node-telegram-bot-api": "^0.64.10",
-    "rimraf": "^5.0.0",
-    "ts-node": "^10.9.0",
-    "typescript": "^5.0.0"
+    "rimraf": "^5.0.5",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.0"
   },
   "keywords": [
     "tiktok",
     "live",
     "recorder",
-    "streaming"
+    "streaming",
+    "typescript"
   ],
   "author": "Yoganataa",
-  "license": "MIT"
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Yoganataa/tiktok-live-recorder"
+  },
+  "bugs": {
+    "url": "https://github.com/Yoganataa/tiktok-live-recorder/issues"
+  },
+  "homepage": "https://github.com/Yoganataa/tiktok-live-recorder#readme"
 }
