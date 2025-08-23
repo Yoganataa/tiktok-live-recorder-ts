@@ -2,6 +2,10 @@
 
 A modern TypeScript implementation of TikTok Live Recorder with enhanced error handling and professional architecture.
 
+> **📍 Based on:** This project is a TypeScript rewrite and enhancement of the original [tiktok-live-recorder](https://github.com/Michele0303/tiktok-live-recorder) by [Michele0303](https://github.com/Michele0303). 
+> 
+> This version includes significant improvements in code architecture, error handling, type safety, and modern JavaScript/TypeScript patterns.
+
 ## 🔧 Installation
 
 ### Prerequisites
@@ -185,6 +189,23 @@ npm run dev
 - Improved type safety
 - Better resource management
 - Professional code architecture
+
+## 🙏 Credits
+
+This project is based on the original work by **[Michele0303](https://github.com/Michele0303)**:
+- **Original Repository**: [tiktok-live-recorder](https://github.com/Michele0303/tiktok-live-recorder)
+- **Original Author**: Michele0303
+
+This TypeScript version includes:
+- Complete code rewrite in TypeScript
+- Enhanced error handling and logging
+- Modern async/await patterns
+- Improved type safety and validation
+- Professional code architecture
+- Better resource management
+- Enhanced CLI argument parsing
+
+Special thanks to Michele0303 for the original implementation and inspiration! 🙏
 
 ## 📄 License
 

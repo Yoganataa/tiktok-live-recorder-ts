@@ -1,7 +1,7 @@
 {
   "name": "tiktok-live-recorder",
   "version": "1.0.1-alpha",
-  "description": "A TypeScript tool for recording live TikTok sessions",
+  "description": "A TypeScript tool for recording live TikTok sessions (based on Michele0303/tiktok-live-recorder)",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc",
