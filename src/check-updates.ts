@@ -4,8 +4,8 @@ import * as https from 'https';
 import * as AdmZip from 'adm-zip';
 import { logger } from './utils/logger-manager';
 
-const URL = "https://raw.githubusercontent.com/Michele0303/tiktok-live-recorder/main/src/utils/enums.py";
-const URL_REPO = "https://github.com/Michele0303/tiktok-live-recorder/archive/refs/heads/main.zip";
+const URL = "https://raw.githubusercontent.com/Yoganataa/tiktok-live-recorder/main/src/utils/enums.py";
+const URL_REPO = "https://github.com/Yoganataa/tiktok-live-recorder/archive/refs/heads/main.zip";
 const FILE_TEMP = "enums_temp.py";
 const FILE_NAME_UPDATE = URL_REPO.split("/").pop() || "main.zip";
 

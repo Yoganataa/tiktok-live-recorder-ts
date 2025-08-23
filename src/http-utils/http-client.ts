@@ -1,8 +1,7 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { StatusCode } from '../utils/enums';
 import { logger } from '../utils/logger-manager';
 import { CookiesConfig } from '../types';
-import { isTermux } from '../utils/utils';
 
 export class HttpClient {
   public req: AxiosInstance;
@@ -31,31 +30,43 @@ export class HttpClient {
     this.proxy = proxy;
     this.cookies = cookies;
 
+    // Create regular axios instance
     this.req = axios.create({
       headers: this.headers,
-      timeout: 30000
+      timeout: 30000,
+      maxRedirects: 5,
+      validateStatus: (status) => status < 500 // Don't throw on 4xx errors
     });
 
+    // Create streaming axios instance
     this.reqStream = axios.create({
       headers: this.headers,
-      timeout: 0,
-      responseType: 'stream'
+      timeout: 0, // No timeout for streaming
+      responseType: 'stream',
+      maxRedirects: 5
     });
 
     this.configureSession();
   }
 
   private configureSession(): void {
+    // Set up cookies
     if (this.cookies) {
       const cookieString = Object.entries(this.cookies)
+        .filter(([, value]) => value) // Only include non-empty values
         .map(([key, value]) => `${key}=${value}`)
         .join('; ');
       
-      this.req.defaults.headers.Cookie = cookieString;
-      this.reqStream.defaults.headers.Cookie = cookieString;
+      if (cookieString) {
+        this.req.defaults.headers.Cookie = cookieString;
+        this.reqStream.defaults.headers.Cookie = cookieString;
+      }
     }
 
-    this.checkProxy();
+    // Set up proxy if provided
+    if (this.proxy) {
+      this.checkProxy();
+    }
   }
 
   private async checkProxy(): Promise<void> {
@@ -66,31 +77,50 @@ export class HttpClient {
     try {
       logger.info(`Testing ${this.proxy}...`);
       
-      const response = await axios.get('https://ifconfig.me/ip', {
-        proxy: this.parseProxy(this.proxy),
+      const proxyConfig = this.parseProxy(this.proxy);
+      
+      // Test the proxy with a simple request
+      const testInstance = axios.create({
+        proxy: proxyConfig,
         timeout: 10000
       });
 
+      const response = await testInstance.get('https://ifconfig.me/ip');
+
       if (response.status === StatusCode.OK) {
-        this.req.defaults.proxy = this.parseProxy(this.proxy);
-        this.reqStream.defaults.proxy = this.parseProxy(this.proxy);
+        this.req.defaults.proxy = proxyConfig;
+        this.reqStream.defaults.proxy = proxyConfig;
         logger.info("Proxy set up successfully");
       }
     } catch (error) {
       logger.error(`Proxy test failed: ${error}`);
+      logger.warning("Continuing without proxy...");
     }
   }
 
   private parseProxy(proxyString: string) {
-    const url = new URL(proxyString);
-    return {
-      protocol: url.protocol.replace(':', ''),
-      host: url.hostname,
-      port: parseInt(url.port),
-      auth: url.username && url.password ? {
-        username: url.username,
-        password: url.password
-      } : undefined
-    };
+    try {
+      const url = new URL(proxyString);
+      return {
+        protocol: url.protocol.replace(':', ''),
+        host: url.hostname,
+        port: parseInt(url.port) || (url.protocol === 'https:' ? 443 : 80),
+        auth: url.username && url.password ? {
+          username: url.username,
+          password: url.password
+        } : undefined
+      };
+    } catch (error) {
+      // Fallback parsing for simple host:port format
+      const parts = proxyString.split(':');
+      if (parts.length >= 2) {
+        return {
+          protocol: 'http',
+          host: parts[0],
+          port: parseInt(parts[1]) || 8080
+        };
+      }
+      throw new Error(`Invalid proxy format: ${proxyString}`);
+    }
   }
 }
