@@ -19,6 +19,7 @@ npm install tstok
 ```
 
 ### Prerequisites
+
 - Node.js 16 or higher
 - FFmpeg installed on your system
 
@@ -90,6 +91,7 @@ tstok -mode followers -cookies ./cookies.json
 ### Configuration Files
 
 #### Custom Cookies File (`my-cookies.json`)
+
 ```json
 {
   "sessionid_ss": "your_session_id_here",
@@ -98,6 +100,7 @@ tstok -mode followers -cookies ./cookies.json
 ```
 
 #### Custom Telegram Config (`my-telegram.json`)
+
 ```json
 {
   "api_id": "your_api_id",
@@ -236,7 +239,7 @@ try {
 
 ```bash
 # Clone the repository
-git clone https://github.com/Yoganataa/tstok.git
+git clone https://github.com/Yoganataa/tiktok-live-recorder-ts.git
 cd tstok
 
 # Install dependencies
@@ -253,6 +256,7 @@ npm run watch
 ```
 
 ### Available Scripts
+
 - `npm run build` - Compile TypeScript to JavaScript
 - `npm run start` - Run the compiled CLI
 - `npm run dev` - Run with ts-node for development
@@ -264,17 +268,20 @@ npm run watch
 ### TstokRecorder Class
 
 #### Constructor
+
 ```typescript
 new TstokRecorder(config: TstokRecorderConfig)
 ```
 
 #### Static Methods
+
 - `TstokRecorder.recordUser(username, options?)` - Quick record a user
 - `TstokRecorder.recordFromUrl(url, options?)` - Quick record from URL
 - `TstokRecorder.recordAutomatic(username, options?)` - Automatic mode recording
 - `TstokRecorder.fromEnv()` - Create from environment variables
 
 #### Instance Methods
+
 - `start()` - Start recording
 - `getConfig()` - Get current configuration
 - `updateConfig(newConfig)` - Update configuration

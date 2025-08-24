@@ -14,18 +14,20 @@ This directory contains usage examples for the TstokRecorder library.
 ### Prerequisites
 
 1. Install the library (choose one method):
+
    ```bash
    # Method 1: Install from npm (when published)
    npm install tstok
    
    # Method 2: Install from GitHub
-   npm install git+https://github.com/Yoganataa/tstok.git
+   npm install git+https://github.com/Yoganataa/tiktok-live-recorder-ts.git
    
    # Method 3: Local development
    npm link  # From the tstok project root
    ```
 
 2. Set up environment variables (optional):
+
    ```bash
    cp .env.example .env
    # Edit .env with your actual values
@@ -54,6 +56,7 @@ ts-node examples/typescript-usage.ts
 ## 📖 Example Types
 
 ### 1. Quick Usage
+
 ```javascript
 const { TstokRecorder } = require('tstok');
 
@@ -62,6 +65,7 @@ await TstokRecorder.recordUser('febri_fey');
 ```
 
 ### 2. Advanced Configuration
+
 ```javascript
 const recorder = new TstokRecorder({
   user: 'febri_fey',
@@ -76,6 +80,7 @@ await recorder.start();
 ```
 
 ### 3. Environment-Based Setup
+
 ```javascript
 // Uses environment variables from .env
 const recorder = TstokRecorder.fromEnv();
@@ -117,5 +122,5 @@ await recorder.start();
 ### Getting Help
 
 - Check the main project README
-- Open an issue on GitHub: https://github.com/Yoganataa/tstok/issues
+- Open an issue on GitHub: https://github.com/Yoganataa/tiktok-live-recorder-ts/issues
 - Review error messages and logs for debugging information
