@@ -1,12 +1,22 @@
-# TikTok Live Recorder - TypeScript Version
+# TstokRecorder - TikTok Live Recorder Library & CLI
 
-A modern TypeScript implementation of TikTok Live Recorder with enhanced error handling and professional architecture.
+A modern TypeScript library and CLI tool for recording live TikTok sessions with enhanced error handling and professional architecture.
 
-> **📍 Based on:** This project is a TypeScript rewrite and enhancement of the original [tiktok-live-recorder](https://github.com/Michele0303/tiktok-live-recorder) by [Michele0303](https://github.com/Michele0303). 
-> 
-> This version includes significant improvements in code architecture, error handling, type safety, and modern JavaScript/TypeScript patterns.
+> **📍 Based on:** This project is a TypeScript rewrite and enhancement of the original [tiktok-live-recorder](https://github.com/Michele0303/tiktok-live-recorder) by [Michele0303](https://github.com/Michele0303).
 
-## 🔧 Installation
+## 🚀 Installation
+
+### Global Installation (CLI Tool)
+
+```bash
+npm install -g tstok
+```
+
+### Local Installation (Library)
+
+```bash
+npm install tstok
+```
 
 ### Prerequisites
 - Node.js 16 or higher
@@ -18,8 +28,6 @@ A modern TypeScript implementation of TikTok Live Recorder with enhanced error h
 ```bash
 # Using Chocolatey
 choco install ffmpeg
-
-# Or download from https://ffmpeg.org/download.html
 ```
 
 **macOS:**
@@ -33,67 +41,55 @@ sudo apt update
 sudo apt install ffmpeg
 ```
 
-### Install Dependencies
+## 📋 CLI Usage
 
-1. Clone or download the project
-2. Install Node.js dependencies:
-
-```bash
-npm install
-```
-
-3. Build the TypeScript project:
-
-```bash
-npm run build
-```
-
-## 🚀 Usage
-
-### Basic Usage
+### Basic Commands
 
 ```bash
 # Record a specific user
-node dist/main.js -user username
+tstok -user username
 
 # Record from URL
-node dist/main.js -url "https://www.tiktok.com/@username/live"
+tstok -url "https://www.tiktok.com/@username/live"
 
 # Record with room ID
-node dist/main.js -room_id 1234567890
+tstok -room_id 1234567890
+
+# Use custom cookies file
+tstok -user username -cookies ./my-cookies.json
+
+# Use custom telegram config
+tstok -user username -telegram ./my-telegram.json
+
+# Multiple users
+tstok -user "user1,user2,user3" -mode manual
 ```
 
 ### Advanced Options
 
 ```bash
 # Automatic mode (keeps checking if user goes live)
-node dist/main.js -user username -mode automatic
+tstok -user username -mode automatic
 
 # Set custom check interval (minutes)
-node dist/main.js -user username -mode automatic -automatic_interval 3
+tstok -user username -mode automatic -automatic_interval 3
 
 # Record with duration limit (seconds)
-node dist/main.js -user username -duration 3600
+tstok -user username -duration 3600
 
 # Custom output directory
-node dist/main.js -user username -output "./recordings/"
+tstok -user username -output "./recordings/"
 
 # Use proxy
-node dist/main.js -user username -proxy "http://127.0.0.1:8080"
-
-# Upload to Telegram after recording
-node dist/main.js -user username -telegram
-
-# Record multiple users simultaneously
-node dist/main.js -user "user1,user2,user3" -mode manual
+tstok -user username -proxy "http://127.0.0.1:8080"
 
 # Followers mode (record all your followed users when they go live)
-node dist/main.js -mode followers
+tstok -mode followers -cookies ./cookies.json
 ```
 
-## 📁 Configuration Files
+### Configuration Files
 
-### Cookies Configuration (`src/cookies.json`)
+#### Custom Cookies File (`my-cookies.json`)
 ```json
 {
   "sessionid_ss": "your_session_id_here",
@@ -101,111 +97,262 @@ node dist/main.js -mode followers
 }
 ```
 
-### Telegram Configuration (`src/telegram.json`)
+#### Custom Telegram Config (`my-telegram.json`)
 ```json
 {
   "api_id": "your_api_id",
-  "api_hash": "your_api_hash", 
+  "api_hash": "your_api_hash",
   "bot_token": "your_bot_token",
   "chat_id": 1234567890
 }
 ```
 
+## 📚 Library Usage
+
+### Environment Variables Setup
+
+Create a `.env` file in your project root:
+
+```env
+# TikTok Cookies
+TIKTOK_SESSION_ID=your_session_id_here
+TIKTOK_TARGET_IDC=useast2a
+
+# Optional: Proxy
+TIKTOK_PROXY=http://127.0.0.1:8080
+
+# Optional: Output Directory
+TIKTOK_OUTPUT_DIR=./recordings/
+
+# Optional: Telegram Config
+TELEGRAM_API_ID=your_api_id
+TELEGRAM_API_HASH=your_api_hash
+TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=1234567890
+```
+
+### Basic Usage
+
+```typescript
+import { TstokRecorder, Mode } from 'tstok';
+
+// Quick record a user (uses .env config)
+await TstokRecorder.recordUser('username');
+
+// Quick record from URL
+await TstokRecorder.recordFromUrl('https://www.tiktok.com/@username/live');
+
+// Automatic mode
+await TstokRecorder.recordAutomatic('username', {
+  automaticInterval: 5 // Check every 5 minutes
+});
+```
+
+### Advanced Usage
+
+```typescript
+import { TstokRecorder, Mode } from 'tstok';
+
+// Create recorder with custom configuration
+const recorder = new TstokRecorder({
+  user: 'username',
+  mode: Mode.MANUAL,
+  automaticInterval: 5,
+  cookies: {
+    sessionid_ss: 'your_session_id',
+    'tt-target-idc': 'useast2a'
+  },
+  output: './my-recordings/',
+  duration: 3600, // 1 hour limit
+  telegramConfig: {
+    api_id: 'your_api_id',
+    api_hash: 'your_api_hash',
+    bot_token: 'your_bot_token',
+    chat_id: 1234567890
+  }
+});
+
+// Start recording
+await recorder.start();
+```
+
+### Multiple Users
+
+```typescript
+import { TstokRecorder, Mode } from 'tstok';
+
+// Record multiple users
+const recorder = new TstokRecorder({
+  user: ['user1', 'user2', 'user3'],
+  mode: Mode.MANUAL
+});
+
+await recorder.start();
+```
+
+### Using Only Environment Variables
+
+```typescript
+import { TstokRecorder } from 'tstok';
+
+// Create recorder from environment variables
+const recorder = TstokRecorder.fromEnv();
+
+// Update specific config
+recorder.updateConfig({
+  user: 'username',
+  mode: Mode.AUTOMATIC
+});
+
+await recorder.start();
+```
+
+### Error Handling
+
+```typescript
+import { 
+  TstokRecorder, 
+  TikTokRecorderError, 
+  UserLiveError, 
+  LiveNotFound 
+} from 'tstok';
+
+try {
+  await TstokRecorder.recordUser('username');
+} catch (error) {
+  if (error instanceof UserLiveError) {
+    console.log('User is not currently live');
+  } else if (error instanceof LiveNotFound) {
+    console.log('Live stream not found');
+  } else if (error instanceof TikTokRecorderError) {
+    console.log('TikTok recorder error:', error.message);
+  } else {
+    console.log('Unexpected error:', error);
+  }
+}
+```
+
 ## 🛠 Development
 
-### Build and Watch
 ```bash
-# Build once
+# Clone the repository
+git clone https://github.com/Yoganataa/tstok.git
+cd tstok
+
+# Install dependencies
+npm install
+
+# Build the project
 npm run build
 
-# Build and watch for changes
-npm run watch
+# Run CLI in development
+npm run dev -- -user username
 
-# Run in development mode
-npm run dev
+# Watch for changes
+npm run watch
 ```
 
 ### Available Scripts
 - `npm run build` - Compile TypeScript to JavaScript
-- `npm run start` - Run the compiled application
+- `npm run start` - Run the compiled CLI
 - `npm run dev` - Run with ts-node for development
 - `npm run watch` - Watch for changes and rebuild
 - `npm run clean` - Remove dist folder
 
-## 🔍 Major Fixes and Improvements
+## 📊 API Reference
 
-### Fixed Issues:
-1. **Stream URL Parsing**: Enhanced SDK data parsing with proper fallbacks
-2. **Error Handling**: Comprehensive error handling throughout the application
-3. **Async/Await**: Proper async/await implementation instead of callback hell
-4. **Type Safety**: Full TypeScript types with proper interfaces
-5. **HTTP Client**: Modern Axios-based HTTP client with retry logic
-6. **Process Management**: Proper signal handling for graceful shutdown
-7. **Argument Parsing**: Robust CLI argument validation
-8. **Memory Management**: Better buffer handling for streaming
-9. **Logging**: Enhanced logging with proper timestamps
-10. **Configuration**: Improved config file handling with error recovery
+### TstokRecorder Class
 
-### Performance Improvements:
-- Optimized streaming with configurable buffer sizes
-- Better resource management
-- Reduced memory usage
-- Enhanced error recovery
+#### Constructor
+```typescript
+new TstokRecorder(config: TstokRecorderConfig)
+```
 
-### Code Quality:
-- Modern TypeScript with strict typing
-- Professional error handling patterns
-- Comprehensive validation
-- Clean architecture with separation of concerns
+#### Static Methods
+- `TstokRecorder.recordUser(username, options?)` - Quick record a user
+- `TstokRecorder.recordFromUrl(url, options?)` - Quick record from URL
+- `TstokRecorder.recordAutomatic(username, options?)` - Automatic mode recording
+- `TstokRecorder.fromEnv()` - Create from environment variables
 
-## 📊 Troubleshooting
+#### Instance Methods
+- `start()` - Start recording
+- `getConfig()` - Get current configuration
+- `updateConfig(newConfig)` - Update configuration
 
-### Common Issues:
+### Configuration Interface
+
+```typescript
+interface TstokRecorderConfig {
+  user?: string | string[];
+  url?: string;
+  roomId?: string;
+  mode?: Mode;
+  automaticInterval?: number;
+  cookies?: CookiesConfig;
+  proxy?: string;
+  output?: string;
+  duration?: number;
+  telegramConfig?: TelegramConfig;
+}
+```
+
+### Modes
+
+```typescript
+enum Mode {
+  MANUAL = 0,      // Record once if live
+  AUTOMATIC = 1,   // Keep checking if user goes live
+  FOLLOWERS = 2    // Record all followed users when they go live
+}
+```
+
+## 🔧 Troubleshooting
+
+### Common Issues
 
 1. **"Unable to retrieve live streaming url"**
    - User might not be live
-   - Try adding cookies to `cookies.json`
+   - Add cookies configuration
    - Check if you need a proxy due to geo-restrictions
 
 2. **FFmpeg not found**
    - Install FFmpeg and ensure it's in your PATH
    - On Windows, you might need to restart your terminal
 
-3. **Network errors**
-   - Try using a proxy if you're in a restricted country
-   - Check your internet connection
-   - Some regions require authentication cookies
-
-4. **Permission errors**
+3. **Permission errors**
    - Ensure you have write permissions to the output directory
    - On Linux/Mac, check file permissions
 
-## 📝 Version History
+4. **Library import errors**
+   - Make sure you've installed the package: `npm install tstok`
+   - Check that your TypeScript/Node.js version is compatible
 
-### v1.0.1-alpha (TypeScript Rewrite)
-- Complete rewrite in TypeScript
-- Enhanced error handling and logging
-- Modern async/await patterns
-- Improved type safety
-- Better resource management
-- Professional code architecture
+## 📄 Publishing
+
+To publish this as an npm package:
+
+```bash
+# Build the project
+npm run build
+
+# Publish to npm
+npm publish
+```
 
 ## 🙏 Credits
 
 This project is based on the original work by **[Michele0303](https://github.com/Michele0303)**:
 - **Original Repository**: [tiktok-live-recorder](https://github.com/Michele0303/tiktok-live-recorder)
-- **Original Author**: Michele0303
 
 This TypeScript version includes:
-- Complete code rewrite in TypeScript
+- Complete rewrite as a library and CLI tool
+- Environment variable support
 - Enhanced error handling and logging
 - Modern async/await patterns
-- Improved type safety and validation
 - Professional code architecture
 - Better resource management
-- Enhanced CLI argument parsing
 
-Special thanks to Michele0303 for the original implementation and inspiration! 🙏
+Special thanks to Michele0303 for the original implementation! 🙏
 
 ## 📄 License
 

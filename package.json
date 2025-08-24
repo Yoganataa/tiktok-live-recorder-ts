@@ -1,20 +1,31 @@
 {
-  "name": "tiktok-live-recorder",
+  "name": "tstok",
   "version": "1.0.1-alpha",
-  "description": "A TypeScript tool for recording live TikTok sessions (based on Michele0303/tiktok-live-recorder)",
-  "main": "dist/main.js",
+  "description": "A TypeScript library and CLI tool for recording live TikTok sessions",
+  "main": "dist/lib/index.js",
+  "types": "dist/lib/index.d.ts",
+  "bin": {
+    "tstok": "dist/lib/cli.js"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
-    "start": "node dist/main.js",
-    "dev": "ts-node src/main.ts",
+    "start": "node dist/lib/cli.js",
+    "dev": "ts-node src/lib/cli.ts",
     "clean": "rimraf dist",
     "watch": "tsc --watch",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "echo \"No tests specified\" && exit 0",
+    "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
     "axios": "^1.6.2",
     "commander": "^11.1.0",
+    "dotenv": "^16.6.1",
     "fluent-ffmpeg": "^2.1.2",
     "fs-extra": "^11.1.1",
     "node-telegram-bot-api": "^0.64.0"
@@ -34,7 +45,9 @@
     "live",
     "recorder",
     "streaming",
-    "typescript"
+    "typescript",
+    "library",
+    "cli"
   ],
   "author": "Yoganataa",
   "license": "MIT",
@@ -43,10 +56,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Yoganataa/tiktok-live-recorder"
+    "url": "https://github.com/Yoganataa/tstok"
   },
   "bugs": {
-    "url": "https://github.com/Yoganataa/tiktok-live-recorder/issues"
+    "url": "https://github.com/Yoganataa/tstok/issues"
   },
-  "homepage": "https://github.com/Yoganataa/tiktok-live-recorder#readme"
+  "homepage": "https://github.com/Yoganataa/tstok#readme"
 }
