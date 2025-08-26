@@ -9,12 +9,18 @@ export function banner(): void {
 
 export function readCookies(): CookiesConfig {
   const configPath = path.join(__dirname, '..', 'cookies.json');
+  if (!fs.existsSync(configPath)) {
+    throw new Error("Cookies file not found. Please create a cookies.json file in the project root or specify a custom path with the -cookies option. See cookies.json.example for the required format.");
+  }
   const content = fs.readFileSync(configPath, 'utf8');
   return JSON.parse(content);
 }
 
 export function readTelegramConfig(): TelegramConfig {
   const configPath = path.join(__dirname, '..', 'telegram.json');
+  if (!fs.existsSync(configPath)) {
+    throw new Error("Telegram config file not found. Please create a telegram.json file in the project root or specify a custom path with the -telegram option. See telegram.json.example for the required format.");
+  }
   const content = fs.readFileSync(configPath, 'utf8');
   return JSON.parse(content);
 }

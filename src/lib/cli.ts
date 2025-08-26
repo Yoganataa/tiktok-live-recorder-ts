@@ -39,6 +39,7 @@ function parseCookiesFile(cookiesPath?: string): CookiesConfig {
     const fullPath = path.resolve(cookiesPath);
     if (!fs.existsSync(fullPath)) {
       logger.warning(`Cookies file not found: ${fullPath}`);
+      logger.info("Tip: Copy cookies.json.example to cookies.json and fill in your TikTok session ID");
       return defaultCookies;
     }
 
@@ -46,6 +47,7 @@ function parseCookiesFile(cookiesPath?: string): CookiesConfig {
     return JSON.parse(content);
   } catch (error) {
     logger.warning(`Failed to read cookies file: ${error}`);
+    logger.info("Tip: Check the format of your cookies.json file. See cookies.json.example for the correct format");
     return defaultCookies;
   }
 }
@@ -59,6 +61,7 @@ function parseTelegramFile(telegramPath?: string): TelegramConfig | undefined {
     const fullPath = path.resolve(telegramPath);
     if (!fs.existsSync(fullPath)) {
       logger.warning(`Telegram config file not found: ${fullPath}`);
+      logger.info("Tip: Copy telegram.json.example to telegram.json and fill in your Telegram credentials");
       return undefined;
     }
 
@@ -66,6 +69,7 @@ function parseTelegramFile(telegramPath?: string): TelegramConfig | undefined {
     return JSON.parse(content);
   } catch (error) {
     logger.warning(`Failed to read telegram config file: ${error}`);
+    logger.info("Tip: Check the format of your telegram.json file. See telegram.json.example for the correct format");
     return undefined;
   }
 }
@@ -115,8 +119,8 @@ async function main(): Promise<void> {
     .option('-room_id, --room-id <roomId>', 'Record from TikTok room ID')
     .option('-mode, --mode <mode>', 'Recording mode: manual, automatic, followers', 'manual')
     .option('-automatic_interval, --automatic-interval <interval>', 'Check interval in minutes for automatic mode', '5')
-    .option('-cookies, --cookies <path>', 'Path to cookies.json file')
-    .option('-telegram, --telegram <path>', 'Path to telegram.json file')
+    .option('-cookies, --cookies <path>', 'Path to cookies.json file (see cookies.json.example for format)')
+    .option('-telegram, --telegram <path>', 'Path to telegram.json file (see telegram.json.example for format)')
     .option('-proxy, --proxy <proxy>', 'HTTP proxy to bypass restrictions')
     .option('-output, --output <output>', 'Output directory for recordings')
     .option('-duration, --duration <duration>', 'Recording duration in seconds')

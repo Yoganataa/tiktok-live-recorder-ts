@@ -1,3 +1,7 @@
+# ===================================================================
+# Node.js/TSPROJECT - .gitignore
+# ===================================================================
+
 # Logs
 logs
 *.log
@@ -73,6 +77,9 @@ web_modules/
 .env.test
 .env.production
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -87,9 +94,6 @@ dist
 
 # Gatsby files
 .cache/
-# Comment in the public line in if your project uses Gatsby and not Next.js
-# https://nextjs.org/blog/next-9-1#public-directory-support
-# public
 
 # vuepress build output
 .vuepress/dist
@@ -126,7 +130,6 @@ out/
 .idea/
 *.swp
 *.swo
-*~
 
 # OS generated files
 .DS_Store
@@ -137,22 +140,28 @@ out/
 ehthumbs.db
 Thumbs.db
 
-# Project specific files
+# Project specific files for Tstok
+# Video files
 *.mp4
 *.flv
+*.mov
+*.avi
+*.wmv
+*.mkv
+
+# Recording directories
 recordings/
 output/
 downloads/
 
-# Temporary files
-tmp/
-temp/
-*.tmp
+# Configuration files (should not be committed)
+cookies.json
+telegram.json
 
-# Package manager lock files (uncomment if you want to ignore them)
-# package-lock.json
-# yarn.lock
-# pnpm-lock.yaml
+# Package manager lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
 
 # Local configuration files
 config.local.json
@@ -170,3 +179,48 @@ coverage/
 *~
 *.bak
 *.orig
+
+# Debug files
+*.debug.log
+
+# TypeScript declaration files (if not part of distribution)
+# *.d.ts (keep for libraries)
+# *.d.ts.map
+
+# npm/yarn cache
+.npm/_cacache
+.yarn/cache
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Jest coverage
+coverage/
+
+# VS Code settings
+.vscode/settings.json
+.vscode/tasks.json
+.vscode/launch.json
+.vscode/extensions.json
+
+# Firebase
+.firebase/
+firebase-debug.log*
+
+# Docker
+.dockerignore
+
+# Log files
+*.log
+
+# Environment files
+.env*.local
+
+# Optional eslint cache
+.eslintcache
+
+# Optional npm cache directory
+.npm
+
+# Optional typescript cache
+*.tsbuildinfo

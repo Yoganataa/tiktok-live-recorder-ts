@@ -1,0 +1,6 @@
+{
+  "api_id": "your_telegram_api_id",
+  "api_hash": "your_telegram_api_hash",
+  "bot_token": "your_bot_token_here",
+  "chat_id": 1234567890
+}

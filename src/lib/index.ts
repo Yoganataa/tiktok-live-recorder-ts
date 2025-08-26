@@ -91,6 +91,18 @@ export class TstokRecorder {
   }
 
   /**
+   * Request graceful shutdown of the recorder
+   */
+  async stop(): Promise<void> {
+    try {
+      await this.recorder.stop();
+    } catch (error) {
+      logger.error(`Error stopping recorder: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
    * Get the current configuration
    */
   getConfig(): TstokRecorderConfig {
