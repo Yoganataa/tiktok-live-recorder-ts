@@ -2,25 +2,36 @@
 
 A modern TypeScript library and CLI tool for recording live TikTok sessions.
 
+> **📍 Based on:** This project is a TypeScript rewrite and enhancement of the original [tiktok-live-recorder](https://github.com/Michele0303/tiktok-live-recorder) by [Michele0303](https://github.com/Michele0303).
+
 ## 🚀 Installation
 
+```bash
+git clone https://github.com/Yoganataa/tiktok-live-recorder-ts.git
+cd tiktok-live-recorder-ts
+```
+
 ### Global Installation (CLI Tool)
+
 ```bash
 npm install -g tstok
 ```
 
 ### Local Installation (Library)
+
 ```bash
 npm install tstok
 ```
 
 ### Prerequisites
+
 - Node.js 16 or higher
 - FFmpeg installed on your system
 
 ## 📋 CLI Usage
 
 ### Basic Commands
+
 ```bash
 # Record a specific user
 tstok -user username
@@ -36,6 +47,7 @@ tstok -user "user1,user2,user3"
 ```
 
 ### Recording Modes
+
 ```bash
 # Manual mode (default) - record if user is live now
 tstok -user username -mode manual
@@ -48,6 +60,7 @@ tstok -mode followers -cookies ./cookies.json
 ```
 
 ### Configuration
+
 ```bash
 # Custom output directory
 tstok -user username -output "./recordings/"
@@ -65,14 +78,18 @@ tstok -user username -telegram ./telegram.json
 ## ⚙️ Configuration Files
 
 ### Setting up Configuration Files
+
 1. Copy the example files:
+
    ```bash
    cp cookies.json.example cookies.json
    cp telegram.json.example telegram.json
    ```
+
 2. Edit the files with your actual credentials
 
 ### Cookies File (cookies.json)
+
 ```json
 {
   "sessionid_ss": "your_tiktok_session_id",
@@ -81,6 +98,7 @@ tstok -user username -telegram ./telegram.json
 ```
 
 ### Telegram Config (telegram.json)
+
 ```json
 {
   "api_id": "your_telegram_api_id",
@@ -91,6 +109,7 @@ tstok -user username -telegram ./telegram.json
 ```
 
 ### Environment Variables (.env)
+
 ```env
 TIKTOK_SESSION_ID=your_session_id
 TIKTOK_OUTPUT_DIR=./recordings/
@@ -100,6 +119,7 @@ TELEGRAM_BOT_TOKEN=your_bot_token
 ## 📚 Library Usage
 
 ### Basic Usage
+
 ```typescript
 import { TstokRecorder } from 'tstok';
 
@@ -116,6 +136,7 @@ await TstokRecorder.recordAutomatic('username', {
 ```
 
 ### Advanced Usage
+
 ```typescript
 import { TstokRecorder, Mode } from 'tstok';
 
@@ -142,6 +163,7 @@ await recorder.start();
 ## 🛠️ Development
 
 ### Setup
+
 ```bash
 git clone https://github.com/Yoganataa/tiktok-live-recorder-ts.git
 cd tstok
@@ -149,6 +171,7 @@ npm install
 ```
 
 ### Building
+
 ```bash
 # Clean previous builds
 npm run clean
@@ -158,9 +181,16 @@ npm run build
 ```
 
 ### Running in Development
+
 ```bash
 npm run dev -- -user username
 ```
 
+## 🙏 Acknowledgments
+
+- Based on [tiktok-live-recorder](https://github.com/Michele0303/tiktok-live-recorder) by [Michele0303](https://github.com/Michele0303)
+- Thanks to all contributors who have helped improve this project
+
 ## 📄 License
+
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
