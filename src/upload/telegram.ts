@@ -2,12 +2,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { TelegramClient } from 'telegram';
 import { StringSession } from 'telegram/sessions';
-import { Api } from 'telegram';
 import { logger } from '../utils/logger-manager';
 import { readTelegramConfig } from '../utils/utils';
 
 const FREE_USER_MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
-const PREMIUM_USER_MAX_FILE_SIZE = 4 * 1024 * 1024 * 1024; // 4GB
 
 export class Telegram {
   private apiId: number;
@@ -53,7 +51,7 @@ export class Telegram {
       });
 
       // Upload the file
-      const result = await this.client.sendFile(this.chatId, {
+      await this.client.sendFile(this.chatId, {
         file: filePath,
         caption: '🎥 <b>Video recorded via <a href="https://github.com/Yoganataa/tiktok-live-recorder">TikTok Live Recorder</a></b>',
         parseMode: 'html'
