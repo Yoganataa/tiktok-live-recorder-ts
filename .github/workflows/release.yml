@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  release:
+    name: Check Version Change and Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '16'
+
+      - name: Get current version
+        id: curr_version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check for existing tag
+        id: tag_check
+        run: |
+          if git rev-parse "v${{ steps.curr_version.outputs.version }}" >/dev/null 2>&1; then
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Display version information
+        run: |
+          echo "Current version: ${{ steps.curr_version.outputs.version }}"
+          echo "Tag exists: ${{ steps.tag_check.outputs.tag_exists }}"
+
+      - name: Build project
+        if: steps.tag_check.outputs.tag_exists == 'false'
+        run: |
+          npm install
+          npm run build
+
+      - name: Create Release
+        if: steps.tag_check.outputs.tag_exists == 'false'
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.curr_version.outputs.version }}
+          release_name: Release v${{ steps.curr_version.outputs.version }}
+          body: |
+            ## Changes in v${{ steps.curr_version.outputs.version }}
+            
+            ### 📦 Installation
+            
+            To install this version:
+            ```bash
+            npm install github:Yoganataa/tiktok-live-recorder-ts#v${{ steps.curr_version.outputs.version }}
+            ```
+            
+            Or in your package.json:
+            ```json
+            {
+              "dependencies": {
+                "tiktok-live-recorder-ts": "github:Yoganataa/tiktok-live-recorder-ts#v${{ steps.curr_version.outputs.version }}"
+              }
+            }
+            ```
+            
+            ### ⚠️ Note
+            
+            This package is only available via GitHub installation.
+          draft: false
+          prerelease: false
+
+      - name: Notify if tag already exists
+        if: steps.tag_check.outputs.tag_exists == 'true'
+        run: |
+          echo "Release v${{ steps.curr_version.outputs.version }} already exists. Skipping release creation."
