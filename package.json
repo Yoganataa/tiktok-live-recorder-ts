@@ -1,5 +1,5 @@
 {
-  "name": "tstok",
+  "name": "tiktok-live-recorder-ts",
   "version": "1.0.2",
   "description": "A TypeScript library and CLI tool for recording live TikTok sessions",
   "main": "dist/lib/index.js",
@@ -19,6 +19,7 @@
     "clean": "rimraf dist",
     "watch": "tsc --watch",
     "test": "echo \"No tests specified\" && exit 0",
+    "prepare": "npm run build",
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
@@ -60,5 +61,6 @@
   "bugs": {
     "url": "https://github.com/Yoganataa/tiktok-live-recorder-ts/issues"
   },
-  "homepage": "https://github.com/Yoganataa/tiktok-live-recorder-ts#readme"
+  "homepage": "https://github.com/Yoganataa/tiktok-live-recorder-ts#readme",
+  "private": true
 }

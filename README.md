@@ -16,31 +16,54 @@ A modern TypeScript library and CLI tool for recording live TikTok sessions.
 
 ## 📦 Installation
 
+This package is designed to be installed directly from GitHub only.
+
 ### Prerequisites
 
 - Node.js 16 or higher
 - FFmpeg installed on your system
 
-### Global Installation (CLI Tool)
+### Installation from GitHub
+
+#### Using HTTPS (Recommended)
 
 ```bash
-npm install -g tstok
+# Install the latest version from the main branch
+npm install github:Yoganataa/tiktok-live-recorder-ts
+
+# Install a specific branch
+npm install github:Yoganataa/tiktok-live-recorder-ts#branch-name
+
+# Install a specific tag/release
+npm install github:Yoganataa/tiktok-live-recorder-ts#v1.0.0
 ```
 
-### Local Installation (Library)
+#### Using SSH (if you have SSH keys set up with GitHub)
 
 ```bash
-npm install tstok
+npm install git+ssh://git@github.com:Yoganataa/tiktok-live-recorder-ts.git
 ```
 
-### From Source
+#### From Source (Manual Clone)
 
 ```bash
 git clone https://github.com/Yoganataa/tiktok-live-recorder-ts.git
 cd tiktok-live-recorder-ts
 npm install
-npm run build
 ```
+
+### Development Installation
+
+For development purposes:
+
+```bash
+git clone https://github.com/Yoganataa/tiktok-live-recorder-ts.git
+cd tiktok-live-recorder-ts
+npm install
+npm link
+```
+
+Note: This package is not published to npm registry. Please install directly from GitHub.
 
 ## 🖥️ CLI Usage
 
