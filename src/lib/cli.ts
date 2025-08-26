@@ -11,20 +11,40 @@ import { checkUpdates } from '../check-updates';
 import { TikTokRecorderError } from '../utils/custom-exceptions';
 import { CookiesConfig, TelegramConfig } from '../types';
 
+/**
+ * CLI arguments interface
+ * @interface CLIArgs
+ */
 export interface CLIArgs {
+  /** TikTok username(s) to record from */
   user?: string | string[];
+  /** TikTok live URL to record from */
   url?: string;
+  /** TikTok room ID to record from */
   roomId?: string;
+  /** Recording mode: manual, automatic, followers */
   mode: string;
+  /** Interval in minutes for automatic mode checking */
   automaticInterval: number;
+  /** Path to cookies.json file */
   cookies?: string;
+  /** Path to telegram.json file */
   telegram?: string;
+  /** HTTP proxy to bypass restrictions */
   proxy?: string;
+  /** Output directory for recordings */
   output?: string;
+  /** Recording duration in seconds */
   duration?: number;
+  /** Whether to check for updates */
   updateCheck: boolean;
 }
 
+/**
+ * Parse cookies file from the provided path
+ * @param cookiesPath - Path to cookies.json file
+ * @returns Cookies configuration object
+ */
 function parseCookiesFile(cookiesPath?: string): CookiesConfig {
   const defaultCookies = {
     sessionid_ss: '',
@@ -52,6 +72,11 @@ function parseCookiesFile(cookiesPath?: string): CookiesConfig {
   }
 }
 
+/**
+ * Parse Telegram configuration file from the provided path
+ * @param telegramPath - Path to telegram.json file
+ * @returns Telegram configuration object or undefined
+ */
 function parseTelegramFile(telegramPath?: string): TelegramConfig | undefined {
   if (!telegramPath) {
     return undefined;
@@ -74,6 +99,11 @@ function parseTelegramFile(telegramPath?: string): TelegramConfig | undefined {
   }
 }
 
+/**
+ * Validate CLI arguments
+ * @param args - CLI arguments to validate
+ * @throws {Error} If arguments are invalid
+ */
 function validateArgs(args: CLIArgs): void {
   if (!['manual', 'automatic', 'followers'].includes(args.mode)) {
     throw new Error("Incorrect mode value. Choose between 'manual', 'automatic' or 'followers'.");
@@ -98,6 +128,11 @@ function validateArgs(args: CLIArgs): void {
   }
 }
 
+/**
+ * Parse user input string into username(s)
+ * @param userInput - User input string (comma-separated usernames)
+ * @returns Single username string or array of usernames
+ */
 function parseUserInput(userInput?: string): string | string[] | undefined {
   if (!userInput) return undefined;
   
@@ -105,6 +140,10 @@ function parseUserInput(userInput?: string): string | string[] | undefined {
   return users.length === 1 ? users[0] : users;
 }
 
+/**
+ * Main CLI function
+ * @returns Promise that resolves when CLI execution is complete
+ */
 async function main(): Promise<void> {
   const program = new Command();
 
@@ -114,16 +153,16 @@ async function main(): Promise<void> {
     .version('1.0.1-alpha');
 
   program
-    .option('-user, --user <user>', 'Record from TikTok username(s), comma-separated for multiple')
-    .option('-url, --url <url>', 'Record from TikTok live URL')
-    .option('-room_id, --room-id <roomId>', 'Record from TikTok room ID')
-    .option('-mode, --mode <mode>', 'Recording mode: manual, automatic, followers', 'manual')
-    .option('-automatic_interval, --automatic-interval <interval>', 'Check interval in minutes for automatic mode', '5')
-    .option('-cookies, --cookies <path>', 'Path to cookies.json file (see cookies.json.example for format)')
-    .option('-telegram, --telegram <path>', 'Path to telegram.json file (see telegram.json.example for format)')
-    .option('-proxy, --proxy <proxy>', 'HTTP proxy to bypass restrictions')
-    .option('-output, --output <output>', 'Output directory for recordings')
-    .option('-duration, --duration <duration>', 'Recording duration in seconds')
+    .option('-u, --user <user>', 'Record from TikTok username(s), comma-separated for multiple')
+    .option('--url <url>', 'Record from TikTok live URL')
+    .option('-r, --room-id <roomId>', 'Record from TikTok room ID')
+    .option('-m, --mode <mode>', 'Recording mode: manual, automatic, followers', 'manual')
+    .option('-a, --automatic-interval <interval>', 'Check interval in minutes for automatic mode', '5')
+    .option('-c, --cookies <path>', 'Path to cookies.json file (see cookies.json.example for format)')
+    .option('-t, --telegram <path>', 'Path to telegram.json file (see telegram.json.example for format)')
+    .option('-p, --proxy <proxy>', 'HTTP proxy to bypass restrictions')
+    .option('-o, --output <output>', 'Output directory for recordings')
+    .option('-d, --duration <duration>', 'Recording duration in seconds')
     .option('--no-update-check', 'Skip update check');
 
   program.parse();

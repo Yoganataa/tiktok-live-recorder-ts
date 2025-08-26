@@ -15,19 +15,35 @@ import {
 import { Mode, Error, TimeOut, TikTokError } from '../utils/enums';
 import { CookiesConfig } from '../types';
 
-// Event class to mimic Python's multiprocessing Event
+/**
+ * Event class to mimic Python's multiprocessing Event
+ * Used for signaling between processes in a Node.js environment
+ * @class StopEvent
+ * @extends EventEmitter
+ */
 class StopEvent extends EventEmitter {
   private _isSet: boolean = false;
 
+  /**
+   * Set the event state to true and emit the 'stop' event
+   */
   set(): void {
     this._isSet = true;
     this.emit('stop');
   }
 
+  /**
+   * Check if the event is set
+   * @returns True if the event is set, false otherwise
+   */
   isSet(): boolean {
     return this._isSet;
   }
 
+  /**
+   * Wait for the event to be set
+   * @returns Promise that resolves when the event is set
+   */
   wait(): Promise<void> {
     return new Promise((resolve) => {
       if (this._isSet) {
@@ -39,6 +55,11 @@ class StopEvent extends EventEmitter {
   }
 }
 
+/**
+ * Main TikTok recorder class
+ * Handles the core functionality for recording TikTok Live sessions
+ * @class TikTokRecorder
+ */
 export class TikTokRecorder {
   private tiktok: TikTokAPI;
   private url?: string;
@@ -52,6 +73,19 @@ export class TikTokRecorder {
   private secUid?: string;
   private stopEvent: StopEvent;
 
+  /**
+   * Creates an instance of TikTokRecorder
+   * @param url - TikTok live URL to record from
+   * @param user - TikTok username to record from
+   * @param roomId - TikTok room ID to record from
+   * @param mode - Recording mode (MANUAL, AUTOMATIC, FOLLOWERS)
+   * @param automaticInterval - Interval in minutes for automatic mode checking
+   * @param cookies - TikTok session cookies for authentication
+   * @param proxy - HTTP proxy to bypass restrictions
+   * @param output - Output directory for recordings
+   * @param duration - Recording duration in seconds
+   * @param useTelegram - Whether to upload recordings to Telegram
+   */
   constructor(
     url?: string,
     user?: string,
@@ -95,6 +129,11 @@ export class TikTokRecorder {
     process.on('SIGINT', this.handleStopSignal);
   }
 
+  /**
+   * Run the recorder based on the configured mode
+   * @returns Promise that resolves when recording is complete
+   * @throws {TikTokRecorderError} If recording fails
+   */
   async run(): Promise<void> {
     // Check if the user's country is blacklisted
     await this.checkCountryBlacklisted();
@@ -137,6 +176,12 @@ export class TikTokRecorder {
     }
   }
 
+  /**
+   * Manual recording mode
+   * Records a single live session immediately
+   * @returns Promise that resolves when recording is complete
+   * @private
+   */
   private async manualMode(): Promise<void> {
     if (!this.roomId || !(await this.tiktok.isRoomAlive(this.roomId))) {
       throw new UserLiveError(`@${this.user}: ${TikTokError.USER_NOT_CURRENTLY_LIVE}`);
@@ -145,6 +190,12 @@ export class TikTokRecorder {
     await this.startRecording(this.user!, this.roomId);
   }
 
+  /**
+   * Automatic recording mode
+   * Continuously monitors a user and records when they go live
+   * @returns Promise that resolves when monitoring stops
+   * @private
+   */
   private async automaticMode(): Promise<void> {
     while (!this.stopEvent.isSet()) {
       try {
@@ -201,96 +252,73 @@ export class TikTokRecorder {
     }
   }
 
+  /**
+   * Followers recording mode
+   * Records live sessions from users that the authenticated user follows
+   * @returns Promise that resolves when monitoring stops
+   * @private
+   */
   private async followersMode(): Promise<void> {
-    const activeRecordings: Map<string, ChildProcess> = new Map();
+    if (!this.secUid) {
+      throw new TikTokRecorderError("secUid is required for followers mode");
+    }
+
+    logger.info("Checking for live followers...\n");
 
     while (!this.stopEvent.isSet()) {
       try {
-        const followers = await this.tiktok.getFollowersList(this.secUid!);
-
-        for (const follower of followers) {
-          if (this.stopEvent.isSet()) break;
-          
-          const existingProcess = activeRecordings.get(follower);
-          if (existingProcess && !existingProcess.killed) {
-            continue;
-          } else if (existingProcess?.exitCode !== null) {
-            logger.info(`Recording of @${follower} finished.`);
-            activeRecordings.delete(follower);
-          }
-
-          try {
-            const roomId = await this.tiktok.getRoomIdFromUser(follower);
-            
-            if (!roomId || !(await this.tiktok.isRoomAlive(roomId))) {
-              continue;
-            }
-
-            logger.info(`@${follower} is live. Starting recording...`);
-
-            // Create a worker for each recording to enable better event handling
-            if (isMainThread) {
-              const process = spawn('node', [
-                path.join(__dirname, '..', 'main.js'),
-                '-user', follower,
-                '-mode', 'manual'
-              ], {
-                detached: false,
-                stdio: 'pipe'
-              });
-
-              activeRecordings.set(follower, process);
-              await this.sleep(2500);
-            }
-
-          } catch (error) {
-            logger.error(`Error while processing @${follower}: ${error}`);
-            continue;
-          }
-        }
+        const followers = await this.tiktok.getFollowersList(this.secUid);
         
+        if (followers.length > 0) {
+          logger.info(`Found ${followers.length} followers`);
+          
+          // Check each follower for live status
+          for (const follower of followers) {
+            try {
+              const roomId = await this.tiktok.getRoomIdFromUser(follower);
+              if (roomId) {
+                // Check if the follower is live
+                const isLive = await this.tiktok.isRoomAlive(roomId);
+                if (isLive) {
+                  logger.info(`Recording live follower: ${follower}`);
+                  await this.startRecording(follower, roomId);
+                }
+              }
+            } catch (error) {
+              // Continue to next follower if one fails
+              logger.error(`Error checking follower ${follower}: ${error}`);
+            }
+          }
+        } else {
+          logger.info("No followers found");
+        }
+
         if (this.stopEvent.isSet()) break;
 
-        console.log();
-        const delay = this.automaticInterval * TimeOut.ONE_MINUTE;
-        logger.info(`Waiting ${delay} seconds for the next check...`);
-        
+        logger.info(`Waiting ${this.automaticInterval} minutes before next check\n`);
         // Wait with periodic stop event checks
-        for (let i = 0; i < delay; i++) {
+        for (let i = 0; i < this.automaticInterval * TimeOut.ONE_MINUTE; i++) {
           if (this.stopEvent.isSet()) {
             logger.info("🛑 Followers mode stopped during wait period");
             return;
           }
           await this.sleep(1000);
         }
-
       } catch (error) {
         if (this.stopEvent.isSet()) break;
         
-        if (error instanceof UserLiveError) {
-          logger.info(error.message);
-          logger.info(`Waiting ${this.automaticInterval} minutes before recheck\n`);
-          // Wait with periodic stop event checks
-          for (let i = 0; i < this.automaticInterval * TimeOut.ONE_MINUTE; i++) {
-            if (this.stopEvent.isSet()) {
-              return;
-            }
-            await this.sleep(1000);
+        logger.error(`Error in followers mode: ${error}`);
+        logger.info(`Waiting ${this.automaticInterval} minutes before retry\n`);
+        
+        // Wait with periodic stop event checks
+        for (let i = 0; i < this.automaticInterval * TimeOut.ONE_MINUTE; i++) {
+          if (this.stopEvent.isSet()) {
+            logger.info("🛑 Followers mode stopped during error recovery");
+            return;
           }
-        } else {
-          logger.error(`Connection error: ${Error.CONNECTION_CLOSED_AUTOMATIC}`);
-          // Wait with periodic stop event checks
-          const waitTime = TimeOut.CONNECTION_CLOSED * TimeOut.ONE_MINUTE;
-          for (let i = 0; i < waitTime; i++) {
-            if (this.stopEvent.isSet()) {
-              return;
-            }
-            await this.sleep(1000);
-          }
+          await this.sleep(1000);
         }
       }
-      
-      if (this.stopEvent.isSet()) break;
     }
     
     if (this.stopEvent.isSet()) {
@@ -298,6 +326,13 @@ export class TikTokRecorder {
     }
   }
 
+  /**
+   * Start recording a live session
+   * @param user - TikTok username
+   * @param roomId - TikTok room ID
+   * @returns Promise that resolves when recording is complete
+   * @private
+   */
   private async startRecording(user: string, roomId: string): Promise<void> {
     const liveUrl = await this.tiktok.getLiveUrl(roomId);
     if (!liveUrl) {
@@ -411,6 +446,29 @@ export class TikTokRecorder {
     }
   }
 
+  /**
+   * Stop the recorder gracefully
+   * @returns Promise that resolves when recorder stops
+   */
+  async stop(): Promise<void> {
+    logger.info("🛑 Graceful stop requested for TikTok recorder");
+    this.stopEvent.set();
+  }
+
+  /**
+   * Handle SIGINT signal for graceful shutdown
+   * @private
+   */
+  private handleStopSignal(): void {
+    logger.info("🛑 SIGINT received, requesting graceful stop");
+    this.stopEvent.set();
+  }
+
+  /**
+   * Check if the user's country is blacklisted
+   * @returns Promise that resolves when check is complete
+   * @private
+   */
   private async checkCountryBlacklisted(): Promise<void> {
     const isBlacklisted = await this.tiktok.isCountryBlacklisted();
     if (!isBlacklisted) {
@@ -428,23 +486,13 @@ export class TikTokRecorder {
     }
   }
 
+  /**
+   * Utility function to sleep for a specified number of milliseconds
+   * @param ms - Number of milliseconds to sleep
+   * @returns Promise that resolves after the specified time
+   * @private
+   */
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  /**
-   * Request graceful shutdown of the recorder
-   */
-  public async stop(): Promise<void> {
-    logger.info("🛑 Graceful stop requested for TikTok recorder");
-    this.stopEvent.set();
-  }
-
-  /**
-   * Handle SIGINT signal for graceful shutdown
-   */
-  private handleStopSignal(): void {
-    logger.info("🛑 SIGINT received, requesting graceful stop");
-    this.stopEvent.set();
   }
 }

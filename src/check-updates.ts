@@ -1,66 +1,63 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import * as https from 'https';
-import * as AdmZip from 'adm-zip';
 import { logger } from './utils/logger-manager';
 
-const URL = "https://raw.githubusercontent.com/Yoganataa/tiktok-live-recorder/main/src/utils/enums.py";
-const URL_REPO = "https://github.com/Yoganataa/tiktok-live-recorder/archive/refs/heads/main.zip";
-const FILE_TEMP = "enums_temp.py";
-const FILE_NAME_UPDATE = URL_REPO.split("/").pop() || "main.zip";
+/**
+ * URL to the package.json file in the main branch of this repository
+ */
+const PACKAGE_JSON_URL = "https://raw.githubusercontent.com/Yoganataa/tiktok-live-recorder-ts/main/package.json";
 
-function deleteTmpFile(): void {
-  try {
-    fs.unlinkSync(FILE_TEMP);
-  } catch {
-    // Ignore error
-  }
-}
-
-function checkFile(filePath: string): boolean {
-  return fs.existsSync(filePath);
-}
-
-function downloadFile(url: string, fileName: string): Promise<void> {
+/**
+ * Download a file from a URL
+ * @param url - URL to download from
+ * @returns Promise that resolves with the file content as a string
+ * @throws {Error} If download fails
+ */
+function downloadFile(url: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(fileName);
-    
     https.get(url, (response) => {
       if (response.statusCode === 200) {
-        response.pipe(file);
-        file.on('finish', () => {
-          file.close();
-          resolve();
+        let data = '';
+        response.on('data', (chunk) => {
+          data += chunk;
+        });
+        response.on('end', () => {
+          resolve(data);
         });
       } else {
-        fs.unlinkSync(fileName);
-        reject(new Error("Error downloading the file."));
+        reject(new Error(`Error downloading file. Status code: ${response.statusCode}`));
       }
     }).on('error', (err) => {
-      fs.unlinkSync(fileName);
       reject(err);
     });
   });
 }
 
+/**
+ * Check for updates by comparing local and remote versions
+ * @returns Promise that resolves with true if updates are available, false otherwise
+ */
 export async function checkUpdates(): Promise<boolean> {
   try {
-    await downloadFile(URL, FILE_TEMP);
+    // Get the current version from the local package.json
+    const currentVersion = require('../package.json').version;
+    logger.info(`Current version: ${currentVersion}`);
 
-    if (!checkFile(FILE_TEMP)) {
-      deleteTmpFile();
-      logger.info("The temporary file does not exist.");
+    // Download the package.json from the repository
+    const remotePackageJson = await downloadFile(PACKAGE_JSON_URL);
+    const remoteVersion = JSON.parse(remotePackageJson).version;
+    logger.info(`Remote version: ${remoteVersion}`);
+
+    // Compare versions
+    if (remoteVersion !== currentVersion) {
+      logger.info("A new version is available!");
+      logger.info(`Update by running: npm install -g tstok`);
+      return true;
+    } else {
+      logger.info("You are using the latest version.");
       return false;
     }
-
-    // Since this is a TypeScript conversion, we'll skip the Python module import
-    // and assume no updates are available for now
-    deleteTmpFile();
-    return false;
-
   } catch (error) {
     logger.error(`Update check failed: ${error}`);
-    deleteTmpFile();
     return false;
   }
 }

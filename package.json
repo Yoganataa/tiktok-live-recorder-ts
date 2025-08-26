@@ -1,6 +1,6 @@
 {
   "name": "tstok",
-  "version": "1.0.1-alpha",
+  "version": "1.0.2",
   "description": "A TypeScript library and CLI tool for recording live TikTok sessions",
   "main": "dist/lib/index.js",
   "types": "dist/lib/index.d.ts",

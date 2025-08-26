@@ -4,12 +4,22 @@ A modern TypeScript library and CLI tool for recording live TikTok sessions.
 
 > **📍 Based on:** This project is a TypeScript rewrite and enhancement of the original [tiktok-live-recorder](https://github.com/Michele0303/tiktok-live-recorder) by [Michele0303](https://github.com/Michele0303).
 
-## 🚀 Installation
+## 🚀 Features
 
-```bash
-git clone https://github.com/Yoganataa/tiktok-live-recorder-ts.git
-cd tiktok-live-recorder-ts
-```
+- 🎯 **Multiple Recording Modes**: Manual, Automatic, and Followers modes
+- 📺 **High Quality Recording**: Records in the best available quality
+- 🤖 **Telegram Integration**: Automatically upload recordings to Telegram
+- 🔧 **Flexible Configuration**: Support for cookies, proxies, and environment variables
+- 🌐 **Cross-Platform**: Works on Windows, macOS, and Linux
+- 📦 **Dual Usage**: Available as both CLI tool and library
+- 🔄 **Auto-Update Checking**: Notifies when new versions are available
+
+## 📦 Installation
+
+### Prerequisites
+
+- Node.js 16 or higher
+- FFmpeg installed on your system
 
 ### Global Installation (CLI Tool)
 
@@ -23,59 +33,82 @@ npm install -g tstok
 npm install tstok
 ```
 
-### Prerequisites
+### From Source
 
-- Node.js 16 or higher
-- FFmpeg installed on your system
+```bash
+git clone https://github.com/Yoganataa/tiktok-live-recorder-ts.git
+cd tiktok-live-recorder-ts
+npm install
+npm run build
+```
 
-## 📋 CLI Usage
+## 🖥️ CLI Usage
 
 ### Basic Commands
 
 ```bash
 # Record a specific user
-tstok -user username
+tstok -u username
 
 # Record from URL
-tstok -url "https://www.tiktok.com/@username/live"
+tstok --url "https://www.tiktok.com/@username/live"
 
 # Record with room ID
-tstok -room_id 1234567890
+tstok -r 1234567890
 
-# Multiple users
-tstok -user "user1,user2,user3"
+# Multiple users (comma-separated)
+tstok -u "user1,user2,user3"
 ```
 
 ### Recording Modes
 
 ```bash
 # Manual mode (default) - record if user is live now
-tstok -user username -mode manual
+tstok -u username -m manual
 
 # Automatic mode - continuously check if user goes live
-tstok -user username -mode automatic -automatic_interval 5
+tstok -u username -m automatic -a 5
 
-# Followers mode - record followers' live streams
-tstok -mode followers -cookies ./cookies.json
+# Followers mode - record live streams of your followers
+tstok -m followers -c ./cookies.json
 ```
 
-### Configuration
+### Advanced Options
 
 ```bash
 # Custom output directory
-tstok -user username -output "./recordings/"
+tstok -u username -o "./recordings/"
 
 # Limit recording duration (in seconds)
-tstok -user username -duration 3600
+tstok -u username -d 3600
 
 # Use proxy
-tstok -user username -proxy "http://127.0.0.1:8080"
+tstok -u username -p "http://127.0.0.1:8080"
 
-# Enable Telegram notifications
-tstok -user username -telegram ./telegram.json
+# Enable Telegram upload
+tstok -u username -t ./telegram.json
+
+# Skip update check
+tstok -u username --no-update-check
 ```
 
-## ⚙️ Configuration Files
+### CLI Options Reference
+
+| Option | Alias | Description |
+|--------|-------|-------------|
+| `--user <user>` | `-u` | TikTok username(s), comma-separated for multiple |
+| `--url <url>` | | TikTok live URL |
+| `--room-id <roomId>` | `-r` | TikTok room ID |
+| `--mode <mode>` | `-m` | Recording mode: manual, automatic, followers (default: "manual") |
+| `--automatic-interval <interval>` | `-a` | Check interval in minutes for automatic mode (default: "5") |
+| `--cookies <path>` | `-c` | Path to cookies.json file |
+| `--telegram <path>` | `-t` | Path to telegram.json file |
+| `--proxy <proxy>` | `-p` | HTTP proxy to bypass restrictions |
+| `--output <output>` | `-o` | Output directory for recordings |
+| `--duration <duration>` | `-d` | Recording duration in seconds |
+| `--no-update-check` | | Skip update check |
+
+## ⚙️ Configuration
 
 ### Setting up Configuration Files
 
@@ -114,6 +147,7 @@ tstok -user username -telegram ./telegram.json
 TIKTOK_SESSION_ID=your_session_id
 TIKTOK_OUTPUT_DIR=./recordings/
 TELEGRAM_BOT_TOKEN=your_bot_token
+TELEGRAM_CHAT_ID=1234567890
 ```
 
 ## 📚 Library Usage
@@ -160,13 +194,44 @@ const recorder = new TstokRecorder({
 await recorder.start();
 ```
 
+### Library API Reference
+
+#### TstokRecorder Class
+
+| Method | Description |
+|--------|-------------|
+| `constructor(config)` | Create a new recorder instance |
+| `start()` | Start recording based on configuration |
+| `stop()` | Request graceful shutdown |
+| `getConfig()` | Get current configuration |
+| `updateConfig(newConfig)` | Update configuration |
+| `static fromEnv()` | Create recorder with environment variables |
+| `static recordUser(username, options)` | Quick user recording |
+| `static recordFromUrl(url, options)` | Quick URL recording |
+| `static recordAutomatic(username, options)` | Quick automatic mode |
+
+#### Configuration Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `user` | string/string[] | TikTok username(s) |
+| `url` | string | TikTok live URL |
+| `roomId` | string | TikTok room ID |
+| `mode` | Mode | Recording mode (MANUAL, AUTOMATIC, FOLLOWERS) |
+| `automaticInterval` | number | Interval for automatic mode (minutes) |
+| `cookies` | CookiesConfig | TikTok session cookies |
+| `proxy` | string | HTTP proxy |
+| `output` | string | Output directory |
+| `duration` | number | Recording duration (seconds) |
+| `telegramConfig` | TelegramConfig | Telegram upload configuration |
+
 ## 🛠️ Development
 
 ### Setup
 
 ```bash
 git clone https://github.com/Yoganataa/tiktok-live-recorder-ts.git
-cd tstok
+cd tiktok-live-recorder-ts
 npm install
 ```
 
@@ -183,8 +248,44 @@ npm run build
 ### Running in Development
 
 ```bash
-npm run dev -- -user username
+npm run dev -- -u username
 ```
+
+### Available Scripts
+
+| Script | Description |
+|--------|-------------|
+| `build` | Compile TypeScript to JavaScript |
+| `start` | Run the compiled CLI |
+| `dev` | Run in development mode |
+| `clean` | Remove compiled files |
+| `watch` | Watch and rebuild on changes |
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+1. **"User not currently live"**: The user is not currently streaming
+2. **"Invalid TikTok live URL"**: Check that the URL is correct
+3. **"Room ID error"**: The user may have ended their stream
+4. **"Account is private"**: Cannot record private accounts
+
+### Getting Help
+
+- Check the console output for error messages
+- Verify your cookies are valid and not expired
+- Ensure FFmpeg is properly installed and accessible
+- Check that your network connection is stable
+
+## 🔄 Updates
+
+The tool automatically checks for updates on each run. When an update is available:
+
+1. You'll see a notification message
+2. Run `npm install -g tstok` to update
+3. Run the tool again
+
+To skip update checking, use the `--no-update-check` flag.
 
 ## 🙏 Acknowledgments
 
