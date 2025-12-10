@@ -37,20 +37,13 @@ export interface TstokRecorderConfig {
 /**
  * Main class for TstokRecorder library
  * Provides a simple interface for recording TikTok Live sessions
- * 
- * @class TstokRecorder
- * @example
- * ```typescript
- * // Record a user manually
- * const recorder = new TstokRecorder({
- *   user: 'username',
- *   mode: Mode.MANUAL
- * });
- * await recorder.start();
- * ```
+ * Supports multiple users concurrently.
+ * * @class TstokRecorder
  */
 export class TstokRecorder {
-  private recorder: TikTokRecorder;
+  // [Changed] Now holds an array of recorders to support multiple users
+  private recorders: TikTokRecorder[] = [];
+  
   private config: Required<Omit<TstokRecorderConfig, 'user' | 'url' | 'roomId' | 'proxy' | 'output' | 'duration' | 'telegramConfig'>> & 
     Pick<TstokRecorderConfig, 'user' | 'url' | 'roomId' | 'proxy' | 'output' | 'duration' | 'telegramConfig'>;
 
@@ -79,19 +72,52 @@ export class TstokRecorder {
       telegramConfig: config.telegramConfig ?? envConfig.telegramConfig
     };
 
-    // Create TikTokRecorder instance
-    this.recorder = new TikTokRecorder(
-      this.config.url,
-      typeof this.config.user === 'string' ? this.config.user : undefined,
-      this.config.roomId,
-      this.config.mode,
-      this.config.automaticInterval,
-      this.config.cookies,
-      this.config.proxy,
-      this.config.output,
-      this.config.duration,
-      !!this.config.telegramConfig
-    );
+    this.initializeRecorders();
+  }
+
+  /**
+   * Initializes recorder instances based on configuration
+   * Handles single user, multiple users, URL, or RoomID
+   * @private
+   */
+  private initializeRecorders(): void {
+    const { user, url, roomId, mode, automaticInterval, cookies, proxy, output, duration, telegramConfig } = this.config;
+    const useTelegram = !!telegramConfig;
+
+    // Case 1: Multiple users (Array)
+    if (Array.isArray(user)) {
+      if (url || roomId) {
+        logger.warning("Multiple users provided. Ignoring 'url' and 'roomId' parameters.");
+      }
+      
+      this.recorders = user.map(username => new TikTokRecorder(
+        undefined, // url
+        username,
+        undefined, // roomId
+        mode,
+        automaticInterval,
+        cookies,
+        proxy,
+        output,
+        duration,
+        useTelegram
+      ));
+    } 
+    // Case 2: Single user (String) or URL or RoomID
+    else {
+      this.recorders = [new TikTokRecorder(
+        url,
+        user, // string or undefined
+        roomId,
+        mode,
+        automaticInterval,
+        cookies,
+        proxy,
+        output,
+        duration,
+        useTelegram
+      )];
+    }
   }
 
   /**
@@ -118,28 +144,43 @@ export class TstokRecorder {
 
   /**
    * Start recording based on configuration
-   * @returns Promise that resolves when recording starts
-   * @throws {TikTokRecorderError} If recording fails to start
+   * Runs all recorder instances concurrently
+   * @returns Promise that resolves when all recordings are complete
    */
   async start(): Promise<void> {
     try {
-      await this.recorder.run();
+      if (this.recorders.length === 0) {
+        logger.error("No recorders initialized. Please check your configuration.");
+        return;
+      }
+
+      if (this.recorders.length > 1) {
+        logger.info(`Starting ${this.recorders.length} recorders concurrently...`);
+      }
+
+      // Run all recorders in parallel
+      const promises = this.recorders.map(recorder => recorder.run().catch(err => {
+        logger.error(`Recorder instance failed: ${err}`);
+      }));
+
+      await Promise.all(promises);
     } catch (error) {
-      logger.error(`Recording failed: ${error}`);
+      logger.error(`Fatal error in main recording loop: ${error}`);
       throw error;
     }
   }
 
   /**
-   * Request graceful shutdown of the recorder
-   * @returns Promise that resolves when recorder stops
-   * @throws {TikTokRecorderError} If stopping fails
+   * Request graceful shutdown of all recorders
+   * @returns Promise that resolves when all recorders stop
    */
   async stop(): Promise<void> {
     try {
-      await this.recorder.stop();
+      logger.info("Stopping all recorders...");
+      const promises = this.recorders.map(recorder => recorder.stop());
+      await Promise.all(promises);
     } catch (error) {
-      logger.error(`Error stopping recorder: ${error}`);
+      logger.error(`Error stopping recorders: ${error}`);
       throw error;
     }
   }
@@ -153,30 +194,17 @@ export class TstokRecorder {
   }
 
   /**
-   * Update configuration
+   * Update configuration and re-initialize recorders
    * @param newConfig - Partial configuration to update
    */
   updateConfig(newConfig: Partial<TstokRecorderConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    
-    // Recreate recorder with new config
-    this.recorder = new TikTokRecorder(
-      this.config.url,
-      typeof this.config.user === 'string' ? this.config.user : undefined,
-      this.config.roomId,
-      this.config.mode,
-      this.config.automaticInterval,
-      this.config.cookies,
-      this.config.proxy,
-      this.config.output,
-      this.config.duration,
-      !!this.config.telegramConfig
-    );
+    // Re-initialize to reflect config changes (e.g. changing users)
+    this.initializeRecorders();
   }
 
   /**
    * Static method to create a recorder with environment variables only
-   * @returns New TstokRecorder instance configured from environment variables
    */
   static fromEnv(): TstokRecorder {
     return new TstokRecorder({});
@@ -184,9 +212,6 @@ export class TstokRecorder {
 
   /**
    * Static method to record a user quickly
-   * @param username - TikTok username to record
-   * @param options - Additional configuration options
-   * @returns Promise that resolves when recording completes
    */
   static async recordUser(username: string, options: Partial<TstokRecorderConfig> = {}): Promise<void> {
     const recorder = new TstokRecorder({
@@ -194,15 +219,11 @@ export class TstokRecorder {
       mode: Mode.MANUAL,
       ...options
     });
-    
     await recorder.start();
   }
 
   /**
    * Static method to record from URL quickly
-   * @param url - TikTok live URL to record
-   * @param options - Additional configuration options
-   * @returns Promise that resolves when recording completes
    */
   static async recordFromUrl(url: string, options: Partial<TstokRecorderConfig> = {}): Promise<void> {
     const recorder = new TstokRecorder({
@@ -210,15 +231,11 @@ export class TstokRecorder {
       mode: Mode.MANUAL,
       ...options
     });
-    
     await recorder.start();
   }
 
   /**
    * Static method for automatic mode recording
-   * @param username - TikTok username to monitor and record
-   * @param options - Additional configuration options
-   * @returns Promise that resolves when recording completes
    */
   static async recordAutomatic(username: string, options: Partial<TstokRecorderConfig> = {}): Promise<void> {
     const recorder = new TstokRecorder({
@@ -226,7 +243,6 @@ export class TstokRecorder {
       mode: Mode.AUTOMATIC,
       ...options
     });
-    
     await recorder.start();
   }
 }
@@ -242,5 +258,4 @@ export {
   NetworkError 
 } from '../utils/custom-exceptions';
 
-// Export default
 export default TstokRecorder;

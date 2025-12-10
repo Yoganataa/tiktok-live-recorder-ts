@@ -1,8 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { ChildProcess, spawn } from 'child_process';
 import { EventEmitter } from 'events';
-import { Worker, isMainThread, parentPort, workerData } from 'worker_threads';
 import { TikTokAPI } from './tiktok-api';
 import { logger } from '../utils/logger-manager';
 import { VideoManagement } from '../utils/video-management';
@@ -10,9 +8,11 @@ import { Telegram } from '../upload';
 import { 
   LiveNotFound, 
   UserLiveError, 
-  TikTokRecorderError 
+  TikTokRecorderError,
+  NetworkError
 } from '../utils/custom-exceptions';
-import { Mode, Error, TimeOut, TikTokError } from '../utils/enums';
+// [FIX] Hapus 'Error', ganti dengan 'SystemError'
+import { Mode, SystemError, TimeOut, TikTokError } from '../utils/enums';
 import { CookiesConfig } from '../types';
 
 /**
@@ -200,47 +200,36 @@ export class TikTokRecorder {
     while (!this.stopEvent.isSet()) {
       try {
         if (this.user) {
+          // Always refresh room_id in automatic mode (v7.5 logic)
           this.roomId = await this.tiktok.getRoomIdFromUser(this.user);
           await this.manualMode();
         }
         
         if (this.stopEvent.isSet()) break;
+
       } catch (error) {
         if (this.stopEvent.isSet()) break;
         
         if (error instanceof UserLiveError) {
           logger.info(error.message);
           logger.info(`Waiting ${this.automaticInterval} minutes before recheck\n`);
-          // Wait with periodic stop event checks
-          for (let i = 0; i < this.automaticInterval * TimeOut.ONE_MINUTE; i++) {
-            if (this.stopEvent.isSet()) {
-              logger.info("🛑 Automatic mode stopped during wait period");
-              return;
-            }
-            await this.sleep(1000);
-          }
+          await this.waitWithCheck(this.automaticInterval * TimeOut.ONE_MINUTE);
+
         } else if (error instanceof LiveNotFound) {
           logger.error(`Live not found: ${error.message}`);
           logger.info(`Waiting ${this.automaticInterval} minutes before recheck\n`);
-          // Wait with periodic stop event checks
-          for (let i = 0; i < this.automaticInterval * TimeOut.ONE_MINUTE; i++) {
-            if (this.stopEvent.isSet()) {
-              logger.info("🛑 Automatic mode stopped during wait period");
-              return;
-            }
-            await this.sleep(1000);
-          }
+          await this.waitWithCheck(this.automaticInterval * TimeOut.ONE_MINUTE);
+
+        // [FIX] Gunakan class Error global, bukan Enum Error yang dulu
+        } else if (error instanceof NetworkError || (error instanceof Error && error.message.includes('Connection'))) {
+          // [FIX] Gunakan SystemError untuk pesan error
+          logger.error(`Connection error: ${SystemError.CONNECTION_CLOSED_AUTOMATIC}`);
+          await this.waitWithCheck(TimeOut.CONNECTION_CLOSED * TimeOut.ONE_MINUTE);
+
         } else {
-          logger.error(`Connection error: ${Error.CONNECTION_CLOSED_AUTOMATIC}`);
-          // Wait with periodic stop event checks
-          const waitTime = TimeOut.CONNECTION_CLOSED * TimeOut.ONE_MINUTE;
-          for (let i = 0; i < waitTime; i++) {
-            if (this.stopEvent.isSet()) {
-              logger.info("🛑 Automatic mode stopped during connection recovery");
-              return;
-            }
-            await this.sleep(1000);
-          }
+          logger.error(`Unexpected error: ${error}\n`);
+          // Safety wait to avoid tight loops on unexpected errors
+          await this.waitWithCheck(1 * TimeOut.ONE_MINUTE);
         }
       }
       
@@ -274,6 +263,8 @@ export class TikTokRecorder {
           
           // Check each follower for live status
           for (const follower of followers) {
+            if (this.stopEvent.isSet()) break;
+
             try {
               const roomId = await this.tiktok.getRoomIdFromUser(follower);
               if (roomId) {
@@ -285,8 +276,9 @@ export class TikTokRecorder {
                 }
               }
             } catch (error) {
-              // Continue to next follower if one fails
-              logger.error(`Error checking follower ${follower}: ${error}`);
+              // Continue to next follower if one fails (logging minimal to avoid spam)
+              // logger.error(`Error checking follower ${follower}: ${error}`);
+              continue;
             }
           }
         } else {
@@ -296,27 +288,26 @@ export class TikTokRecorder {
         if (this.stopEvent.isSet()) break;
 
         logger.info(`Waiting ${this.automaticInterval} minutes before next check\n`);
-        // Wait with periodic stop event checks
-        for (let i = 0; i < this.automaticInterval * TimeOut.ONE_MINUTE; i++) {
-          if (this.stopEvent.isSet()) {
-            logger.info("🛑 Followers mode stopped during wait period");
-            return;
-          }
-          await this.sleep(1000);
-        }
+        await this.waitWithCheck(this.automaticInterval * TimeOut.ONE_MINUTE);
+
       } catch (error) {
         if (this.stopEvent.isSet()) break;
         
-        logger.error(`Error in followers mode: ${error}`);
-        logger.info(`Waiting ${this.automaticInterval} minutes before retry\n`);
-        
-        // Wait with periodic stop event checks
-        for (let i = 0; i < this.automaticInterval * TimeOut.ONE_MINUTE; i++) {
-          if (this.stopEvent.isSet()) {
-            logger.info("🛑 Followers mode stopped during error recovery");
-            return;
-          }
-          await this.sleep(1000);
+        if (error instanceof UserLiveError) {
+             logger.info(error.message);
+             logger.info(`Waiting ${this.automaticInterval} minutes before recheck\n`);
+             await this.waitWithCheck(this.automaticInterval * TimeOut.ONE_MINUTE);
+
+        // [FIX] Gunakan class Error global
+        } else if (error instanceof NetworkError || (error instanceof Error && error.message.includes('Connection'))) {
+             // [FIX] Gunakan SystemError
+             logger.error(`Connection error: ${SystemError.CONNECTION_CLOSED_AUTOMATIC}`);
+             await this.waitWithCheck(TimeOut.CONNECTION_CLOSED * TimeOut.ONE_MINUTE);
+             
+        } else {
+             logger.error(`Error in followers mode: ${error}`);
+             logger.info(`Waiting ${this.automaticInterval} minutes before retry\n`);
+             await this.waitWithCheck(this.automaticInterval * TimeOut.ONE_MINUTE);
         }
       }
     }
@@ -327,6 +318,22 @@ export class TikTokRecorder {
   }
 
   /**
+   * Helper function to wait for a duration while checking for stop signals
+   * @param seconds - Number of seconds to wait
+   */
+  private async waitWithCheck(seconds: number): Promise<void> {
+      const ms = seconds * 1000;
+      const step = 1000; // Check every 1 second
+      let waited = 0;
+      
+      while (waited < ms) {
+          if (this.stopEvent.isSet()) return;
+          await this.sleep(step);
+          waited += step;
+      }
+  }
+
+  /**
    * Start recording a live session
    * @param user - TikTok username
    * @param roomId - TikTok room ID
@@ -334,6 +341,7 @@ export class TikTokRecorder {
    * @private
    */
   private async startRecording(user: string, roomId: string): Promise<void> {
+    // [V7.5 Update] getLiveUrl now handles fallback internally
     const liveUrl = await this.tiktok.getLiveUrl(roomId);
     if (!liveUrl) {
       throw new LiveNotFound(TikTokError.RETRIEVE_LIVE_URL);
@@ -362,7 +370,7 @@ export class TikTokRecorder {
     let buffer = Buffer.alloc(0);
     let stopRecording = false;
 
-    logger.info("[Recording can be stopped gracefully via bot commands]");
+    logger.info("[PRESS CTRL + C ONCE TO STOP]");
 
     try {
       const writeStream = fs.createWriteStream(output);
@@ -382,9 +390,8 @@ export class TikTokRecorder {
           }
 
           const streamGen = this.tiktok.downloadLiveStream(liveUrl);
-          const streamIterator = await streamGen;
           
-          for await (const chunk of streamIterator) {
+          for await (const chunk of streamGen) {
             if (stopRecording || this.stopEvent.isSet()) {
               if (this.stopEvent.isSet()) {
                 logger.info("🛑 Graceful stop during download, finishing...");
@@ -408,11 +415,19 @@ export class TikTokRecorder {
 
         } catch (streamError) {
           if (this.stopEvent.isSet()) break;
-          logger.error(`Stream error: ${streamError}`);
-          await this.sleep(2000);
+          // Handle specific stream errors or just wait and retry
+          if (this.mode === Mode.AUTOMATIC && (streamError instanceof NetworkError)) {
+               // [FIX] Gunakan SystemError
+               logger.error(SystemError.CONNECTION_CLOSED_AUTOMATIC);
+               await this.waitWithCheck(TimeOut.CONNECTION_CLOSED * TimeOut.ONE_MINUTE);
+          } else {
+               // Small delay before retrying the loop/check
+               await this.sleep(2000);
+          }
         }
       }
 
+      // Flush remaining buffer
       if (buffer.length > 0) {
         writeStream.write(buffer);
       }
@@ -426,7 +441,6 @@ export class TikTokRecorder {
       logger.info(`Recording finished: ${output}\n`);
       
       // Critical: Convert file before process ends
-      // This ensures the file is properly converted even during graceful stop
       logger.info("🔄 Converting FLV to MP4...");
       try {
         await VideoManagement.convertFlvToMp4(output);
@@ -434,6 +448,7 @@ export class TikTokRecorder {
         
         if (this.useTelegram) {
           const telegram = new Telegram();
+          // Adjust filename for upload (after conversion)
           await telegram.upload(output.replace('_flv.mp4', '.mp4'));
         }
       } catch (error) {
@@ -442,6 +457,8 @@ export class TikTokRecorder {
 
     } catch (error) {
       logger.error(`Recording error: ${error}`);
+      // In automatic mode, we might want to suppress this so the loop continues,
+      // but run() will catch bubbling errors. 
       throw error;
     }
   }

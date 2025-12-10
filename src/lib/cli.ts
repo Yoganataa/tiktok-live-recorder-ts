@@ -10,6 +10,7 @@ import { banner } from '../utils/utils';
 import { checkUpdates } from '../check-updates';
 import { TikTokRecorderError } from '../utils/custom-exceptions';
 import { CookiesConfig, TelegramConfig } from '../types';
+import * as packageJson from '../../package.json';
 
 /**
  * CLI arguments interface
@@ -150,7 +151,7 @@ async function main(): Promise<void> {
   program
     .name('tstok')
     .description('TstokRecorder - A library and CLI tool for recording live TikTok sessions.')
-    .version('1.0.1-alpha');
+    .version(packageJson.version); // [UPDATE] Gunakan versi dari package.json
 
   program
     .option('-u, --user <user>', 'Record from TikTok username(s), comma-separated for multiple')
