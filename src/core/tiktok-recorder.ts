@@ -11,7 +11,6 @@ import {
   TikTokRecorderError,
   NetworkError
 } from '../utils/custom-exceptions';
-// [FIX] Hapus 'Error', ganti dengan 'SystemError'
 import { Mode, SystemError, TimeOut, TikTokError } from '../utils/enums';
 import { CookiesConfig } from '../types';
 
@@ -220,9 +219,7 @@ export class TikTokRecorder {
           logger.info(`Waiting ${this.automaticInterval} minutes before recheck\n`);
           await this.waitWithCheck(this.automaticInterval * TimeOut.ONE_MINUTE);
 
-        // [FIX] Gunakan class Error global, bukan Enum Error yang dulu
         } else if (error instanceof NetworkError || (error instanceof Error && error.message.includes('Connection'))) {
-          // [FIX] Gunakan SystemError untuk pesan error
           logger.error(`Connection error: ${SystemError.CONNECTION_CLOSED_AUTOMATIC}`);
           await this.waitWithCheck(TimeOut.CONNECTION_CLOSED * TimeOut.ONE_MINUTE);
 
@@ -277,7 +274,6 @@ export class TikTokRecorder {
               }
             } catch (error) {
               // Continue to next follower if one fails (logging minimal to avoid spam)
-              // logger.error(`Error checking follower ${follower}: ${error}`);
               continue;
             }
           }
@@ -298,9 +294,7 @@ export class TikTokRecorder {
              logger.info(`Waiting ${this.automaticInterval} minutes before recheck\n`);
              await this.waitWithCheck(this.automaticInterval * TimeOut.ONE_MINUTE);
 
-        // [FIX] Gunakan class Error global
         } else if (error instanceof NetworkError || (error instanceof Error && error.message.includes('Connection'))) {
-             // [FIX] Gunakan SystemError
              logger.error(`Connection error: ${SystemError.CONNECTION_CLOSED_AUTOMATIC}`);
              await this.waitWithCheck(TimeOut.CONNECTION_CLOSED * TimeOut.ONE_MINUTE);
              
@@ -341,7 +335,6 @@ export class TikTokRecorder {
    * @private
    */
   private async startRecording(user: string, roomId: string): Promise<void> {
-    // [V7.5 Update] getLiveUrl now handles fallback internally
     const liveUrl = await this.tiktok.getLiveUrl(roomId);
     if (!liveUrl) {
       throw new LiveNotFound(TikTokError.RETRIEVE_LIVE_URL);
@@ -359,6 +352,17 @@ export class TikTokRecorder {
     }
 
     const output = `${outputPath}TK_${user}_${currentDate}_flv.mp4`;
+
+    // [FIX] Buat folder jika belum ada (rekursif untuk nested path)
+    const outputDir = path.dirname(output);
+    if (!fs.existsSync(outputDir)) {
+      try {
+        fs.mkdirSync(outputDir, { recursive: true });
+      } catch (err) {
+        logger.error(`Failed to create output directory: ${err}`);
+        throw err;
+      }
+    }
 
     if (this.duration) {
       logger.info(`Started recording for ${this.duration} seconds`);
@@ -417,7 +421,6 @@ export class TikTokRecorder {
           if (this.stopEvent.isSet()) break;
           // Handle specific stream errors or just wait and retry
           if (this.mode === Mode.AUTOMATIC && (streamError instanceof NetworkError)) {
-               // [FIX] Gunakan SystemError
                logger.error(SystemError.CONNECTION_CLOSED_AUTOMATIC);
                await this.waitWithCheck(TimeOut.CONNECTION_CLOSED * TimeOut.ONE_MINUTE);
           } else {
@@ -440,7 +443,6 @@ export class TikTokRecorder {
 
       logger.info(`Recording finished: ${output}\n`);
       
-      // Critical: Convert file before process ends
       logger.info("🔄 Converting FLV to MP4...");
       try {
         await VideoManagement.convertFlvToMp4(output);
@@ -448,7 +450,6 @@ export class TikTokRecorder {
         
         if (this.useTelegram) {
           const telegram = new Telegram();
-          // Adjust filename for upload (after conversion)
           await telegram.upload(output.replace('_flv.mp4', '.mp4'));
         }
       } catch (error) {
@@ -457,8 +458,6 @@ export class TikTokRecorder {
 
     } catch (error) {
       logger.error(`Recording error: ${error}`);
-      // In automatic mode, we might want to suppress this so the loop continues,
-      // but run() will catch bubbling errors. 
       throw error;
     }
   }
