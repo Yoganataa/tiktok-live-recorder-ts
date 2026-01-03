@@ -35,13 +35,13 @@ export class HttpClient {
       headers: this.headers,
       timeout: 30000,
       maxRedirects: 5,
-      validateStatus: (status) => status < 500 // Don't throw on 4xx errors
+      validateStatus: (status) => status < 500 
     });
 
     // Create streaming axios instance
     this.reqStream = axios.create({
       headers: this.headers,
-      timeout: 0, // No timeout for streaming
+      timeout: 0, 
       responseType: 'stream',
       maxRedirects: 5
     });
@@ -53,7 +53,7 @@ export class HttpClient {
     // Set up cookies
     if (this.cookies) {
       const cookieString = Object.entries(this.cookies)
-        .filter(([, value]) => value) // Only include non-empty values
+        .filter(([, value]) => value) 
         .map(([key, value]) => `${key}=${value}`)
         .join('; ');
       

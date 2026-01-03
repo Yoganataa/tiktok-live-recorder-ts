@@ -27,26 +27,31 @@ export enum TikTokError {
   ROOM_ID_ERROR = "Error extracting RoomID",
   RETRIEVE_LIVE_URL = "Unable to retrieve live streaming url. Please try again later.",
   INVALID_TIKTOK_LIVE_URL = "The provided URL is not a valid TikTok live stream.",
-  LIVE_RESTRICTION = "Live is private, login required. Please add your cookies to cookies.json"
+  LIVE_RESTRICTION = "Live is private, login required. Please add your cookies to cookies.json",
+  WAF_BLOCKED = "Your IP is blocked by TikTok WAF. Please change your IP address."
 }
 
-export enum Error {
+// [UBAH NAMA] Dari Error menjadi SystemError untuk menghindari konflik
+export enum SystemError {
   CONNECTION_CLOSED = "Connection broken by the server.",
   CONNECTION_CLOSED_AUTOMATIC = "Connection broken by the server. Try again after delay of 2 minutes"
 }
 
 import * as packageJson from '../../package.json';
 
-const VERSION = packageJson.version;
+// Pastikan package.json ada di root atau sesuaikan path ini
+const VERSION = packageJson.version; 
 
 export const Info: {
   VERSION: string;
   NEW_FEATURES: string[];
   BANNER: string;
 } = {
-  VERSION,
+  VERSION: "1.0.3",
   NEW_FEATURES: [
-    "Fixed interrupt issue when using Ctrl+C"
+    "Implemented TikRec API for signed requests (Anti-WAF)",
+    "Added fallback mechanism for stream URLs",
+    "Updated followers API parameters"
   ],
   BANNER: `
 

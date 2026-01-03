@@ -19,6 +19,7 @@ export class TikTokAPI {
   private BASE_URL = 'https://www.tiktok.com';
   private WEBCAST_URL = 'https://webcast.tiktok.com';
   private API_URL = 'https://www.tiktok.com/api-live/user/room/';
+  private TIKREC_API = 'https://tikrec.com'; // [V7.5] New API endpoint
 
   private httpClient: HttpClient;
 
@@ -157,18 +158,37 @@ export class TikTokAPI {
     }
   }
 
+  // [V7.5] Helper to get signed URL from TikRec
+  private async getTikrecSignedUrl(user: string): Promise<string> {
+    try {
+      const response = await this.httpClient.req.get(
+        `${this.TIKREC_API}/tiktok/room/api/sign`,
+        {
+          params: { unique_id: user }
+        }
+      );
+
+      const data = response.data;
+      const signedPath = data.signed_path;
+      return `${this.BASE_URL}${signedPath}`;
+    } catch (error) {
+      // If TikRec fails, we might want to log it and let the caller handle it or fall back
+      logger.error(`TikRec signing failed: ${error}`);
+      // Fallback: return standard API URL (might get blocked)
+      return `${this.API_URL}?uniqueId=${user}&sourceType=54&aid=1988`;
+    }
+  }
+
+  // [V7.5] Updated to use Signed URL logic
   async getRoomIdFromUser(user: string): Promise<string> {
     try {
-      const response = await this.httpClient.req.get(this.API_URL, {
-        params: {
-          uniqueId: user,
-          sourceType: 54,
-          aid: 1988
-        }
-      });
+      const signedUrl = await this.getTikrecSignedUrl(user);
 
-      if (response.status !== 200) {
-        throw new UserLiveError(TikTokError.ROOM_ID_ERROR);
+      const response = await this.httpClient.req.get(signedUrl);
+      const content = JSON.stringify(response.data);
+
+      if (!content || content.includes("Please wait")) {
+        throw new UserLiveError(TikTokError.WAF_BLOCKED);
       }
 
       const data: UserRoomData = response.data;
@@ -187,25 +207,37 @@ export class TikTokAPI {
     }
   }
 
+  // [V7.5] Updated parameters to match Python version
   async getFollowersList(secUid: string): Promise<string[]> {
     const followers: string[] = [];
     let cursor = 0;
     let hasMore = true;
 
+    // Try to get msToken (simplified compared to Python, or can be improved later)
+    let msToken = '';
+    try {
+        // Initial request to populate cookies if needed
+        const initResp = await this.httpClient.req.get(`${this.BASE_URL}/api/user/list/?count=1`);
+        // Basic extraction attempt, often msToken is set in cookies automatically by axios if received
+        // Note: Python explicitly extracts it. In Axios with jar, it handles it.
+    } catch (e) { /* ignore */ }
+
     while (hasMore) {
       try {
+        // Using updated V7.5 Hardcoded parameters
         const url = `${this.BASE_URL}/api/user/list/` +
           `?WebIdLastTime=1747672102&aid=1988&app_language=it-IT&app_name=tiktok_web` +
           `&browser_language=it-IT&browser_name=Mozilla&browser_online=true` +
-          `&browser_platform=Linux%20x86_64&browser_version=5.0` +
-          `&channel=tiktok_web&cookie_enabled=true&count=30&data_collection_enabled=true` +
+          `&browser_platform=Linux%20x86_64&browser_version=5.0%20%28X11%3B%20Linux%20x86_64%29%20AppleWebKit%2F537.36%20%28KHTML%2C%20like%20Gecko%29%20Chrome%2F140.0.0.0%20Safari%2F537.36` +
+          `&channel=tiktok_web&cookie_enabled=true&count=5&data_collection_enabled=true` +
           `&device_id=7506194516308166166&device_platform=web_pc&focus_state=true` +
-          `&from_page=user&history_len=2&is_fullscreen=false&is_page_visible=true` +
+          `&from_page=user&history_len=3&is_fullscreen=false&is_page_visible=true` +
           `&maxCursor=${cursor}&minCursor=${cursor}&odinId=7246312836442604570` +
           `&os=linux&priority_region=IT&referer=&region=IT&scene=21` +
           `&screen_height=1080&screen_width=1920&secUid=${secUid}` +
-          `&tz_name=Europe%2FRome&user_is_login=true&webcast_language=it-IT` +
-          `&msToken=&X-Bogus=&X-Gnarly=`;
+          `&tz_name=Europe%2FRome&user_is_login=true` +
+          `&verifyFp=verify_mh4yf0uq_rdjp1Xwt_OoTk_4Jrf_AS8H_sp31opbnJFre` +
+          `&webcast_language=it-IT&msToken=${msToken}&X-Bogus=&X-Gnarly=`;
 
         const response = await this.httpClient.req.get(url);
 
@@ -245,6 +277,7 @@ export class TikTokAPI {
     return followers;
   }
 
+  // [V7.5] Added Fallback Logic for Live URL
   async getLiveUrl(roomId: string): Promise<string | null> {
     try {
       const response = await this.httpClient.req.get(
@@ -266,8 +299,10 @@ export class TikTokAPI {
       }
 
       const sdkDataStr = streamUrl.live_core_sdk_data?.pull_data?.stream_data;
+      
+      // [V7.5] Fallback Mechanism
       if (!sdkDataStr) {
-        logger.warning("No SDK stream data found. Falling back to legacy URLs. Consider contacting the developer to update the code.");
+        logger.warning("No SDK stream data found. Falling back to legacy URLs.");
         return streamUrl.flv_pull_url?.FULL_HD1 ||
                streamUrl.flv_pull_url?.HD1 ||
                streamUrl.flv_pull_url?.SD2 ||
@@ -276,7 +311,7 @@ export class TikTokAPI {
                null;
       }
 
-      // Extract stream options
+      // Extract stream options from SDK data
       const sdkData: StreamData = JSON.parse(sdkDataStr);
       const qualities = streamUrl.live_core_sdk_data?.pull_data?.options?.qualities || [];
       

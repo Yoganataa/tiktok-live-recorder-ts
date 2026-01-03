@@ -1,40 +1,53 @@
 {
-  "name": "tiktok-live-recorder",
-  "version": "1.0.1-alpha",
-  "description": "A TypeScript tool for recording live TikTok sessions (based on Michele0303/tiktok-live-recorder)",
-  "main": "dist/main.js",
+  "name": "tiktok-live-recorder-ts",
+  "version": "1.0.3",
+  "description": "A TypeScript library and CLI tool for recording live TikTok sessions",
+  "main": "dist/lib/index.js",
+  "types": "dist/lib/index.d.ts",
+  "bin": {
+    "tstok": "dist/lib/cli.js"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "SECURITY.md"
+  ],
   "scripts": {
     "build": "tsc",
-    "start": "node dist/main.js",
-    "dev": "ts-node src/main.ts",
+    "start": "node dist/lib/cli.js",
+    "dev": "ts-node src/lib/cli.ts",
     "clean": "rimraf dist",
     "watch": "tsc --watch",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "echo \"No tests specified\" && exit 0",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
-    "adm-zip": "^0.5.16",
-    "axios": "^1.6.2",
-    "commander": "^11.1.0",
-    "fluent-ffmpeg": "^2.1.2",
-    "fs-extra": "^11.1.1",
-    "node-telegram-bot-api": "^0.64.0"
+    "axios": "^1.11.0",
+    "cheerio": "^1.1.2",
+    "commander": "^14.0.0",
+    "dotenv": "^17.2.1",
+    "fluent-ffmpeg": "^2.1.3",
+    "telegram": "^2.26.22"
   },
   "devDependencies": {
-    "@types/adm-zip": "^0.5.7",
-    "@types/fluent-ffmpeg": "^2.1.24",
-    "@types/fs-extra": "^11.0.4",
-    "@types/node": "^20.10.0",
-    "@types/node-telegram-bot-api": "^0.64.10",
-    "rimraf": "^5.0.5",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.3.0"
+    "@types/fluent-ffmpeg": "^2.1.27",
+    "@types/node": "^24.3.0",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
   },
   "keywords": [
     "tiktok",
     "live",
     "recorder",
     "streaming",
-    "typescript"
+    "typescript",
+    "library",
+    "cli"
   ],
   "author": "Yoganataa",
   "license": "MIT",
@@ -43,10 +56,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Yoganataa/tiktok-live-recorder"
+    "url": "https://github.com/Yoganataa/tiktok-live-recorder-ts"
   },
   "bugs": {
-    "url": "https://github.com/Yoganataa/tiktok-live-recorder/issues"
+    "url": "https://github.com/Yoganataa/tiktok-live-recorder-ts/issues"
   },
-  "homepage": "https://github.com/Yoganataa/tiktok-live-recorder#readme"
+  "homepage": "https://github.com/Yoganataa/tiktok-live-recorder-ts#readme",
+  "private": true
 }
