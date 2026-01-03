@@ -46,8 +46,8 @@ jobs:
       - name: Build project
         if: steps.tag_check.outputs.tag_exists == 'false'
         run: |
-          pnpm install
-          pnpm run build
+          npm install
+          npm run build
 
       - name: Create Release
         if: steps.tag_check.outputs.tag_exists == 'false'
