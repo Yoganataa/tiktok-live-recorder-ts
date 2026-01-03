@@ -22,6 +22,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "lint": "eslint .",
+    "prepare": "npm run build",
     "test": "echo \"No tests yet\""
   },
   "dependencies": {
