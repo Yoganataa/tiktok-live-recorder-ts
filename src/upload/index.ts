@@ -1,1 +1,0 @@
-export { Telegram } from './telegram';

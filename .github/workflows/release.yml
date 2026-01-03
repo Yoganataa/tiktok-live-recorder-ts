@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '16'
+          node-version: '18'
 
       - name: Get current version
         id: curr_version
@@ -46,8 +46,8 @@ jobs:
       - name: Build project
         if: steps.tag_check.outputs.tag_exists == 'false'
         run: |
-          npm install
-          npm run build
+          pnpm install
+          pnpm run build
 
       - name: Create Release
         if: steps.tag_check.outputs.tag_exists == 'false'

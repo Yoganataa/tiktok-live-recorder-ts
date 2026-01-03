@@ -1,66 +1,42 @@
 {
-  "name": "tiktok-live-recorder-ts",
-  "version": "1.0.3",
-  "description": "A TypeScript library and CLI tool for recording live TikTok sessions",
-  "main": "dist/lib/index.js",
-  "types": "dist/lib/index.d.ts",
-  "bin": {
-    "tstok": "dist/lib/cli.js"
+  "name": "@yoganataa/tstok",
+  "version": "0.1",
+  "description": "TypeScript-first TikTok Live Recorder library",
+  "license": "MIT",
+  "author": "Yoganataa",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
   },
   "files": [
-    "dist/**/*",
-    "README.md",
-    "LICENSE",
-    "CONTRIBUTING.md",
-    "CODE_OF_CONDUCT.md",
-    "SECURITY.md"
+    "dist"
   ],
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/lib/cli.js",
-    "dev": "ts-node src/lib/cli.ts",
-    "clean": "rimraf dist",
-    "watch": "tsc --watch",
-    "test": "echo \"No tests specified\" && exit 0",
-    "prepare": "npm run build",
-    "prepublishOnly": "npm run clean && npm run build"
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "eslint .",
+    "test": "echo \"No tests yet\""
   },
   "dependencies": {
-    "axios": "^1.11.0",
-    "cheerio": "^1.1.2",
-    "commander": "^14.0.0",
-    "dotenv": "^17.2.1",
-    "fluent-ffmpeg": "^2.1.3",
-    "telegram": "^2.26.22"
+    "dotenv": "^16.6.1",
+    "pino": "^9.14.0",
+    "pino-pretty": "^13.1.3",
+    "telegram": "^2.26.22",
+    "undici": "^6.22.0"
   },
   "devDependencies": {
-    "@types/fluent-ffmpeg": "^2.1.27",
-    "@types/node": "^24.3.0",
-    "rimraf": "^6.0.1",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "@types/node": "^22.19.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
   },
-  "keywords": [
-    "tiktok",
-    "live",
-    "recorder",
-    "streaming",
-    "typescript",
-    "library",
-    "cli"
-  ],
-  "author": "Yoganataa",
-  "license": "MIT",
   "engines": {
-    "node": ">=16.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Yoganataa/tiktok-live-recorder-ts"
-  },
-  "bugs": {
-    "url": "https://github.com/Yoganataa/tiktok-live-recorder-ts/issues"
-  },
-  "homepage": "https://github.com/Yoganataa/tiktok-live-recorder-ts#readme",
-  "private": true
+    "node": ">=18"
+  }
 }
