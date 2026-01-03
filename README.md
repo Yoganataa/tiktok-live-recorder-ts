@@ -53,19 +53,19 @@ src/
 ### Using a tagged release (recommended)
 
 ```bash
-pnpm add github:Yoganataa/tstok#v0.1
+pnpm add github:Yoganataa/tstok#v2.0.0
 ```
 
 or with npm:
 
 ```bash
-npm install github:Yoganataa/tstok#v0.1
+npm install github:Yoganataa/tstok#v2.0.0
 ```
 
 or yarn:
 
 ```bash
-yarn add github:Yoganataa/tstok#v0.1
+yarn add github:Yoganataa/tstok#v2.0.0
 ```
 
 ### Using a branch (development)
