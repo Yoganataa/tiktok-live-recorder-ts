@@ -1,53 +1,18 @@
-import type { HttpClient } from './HttpClient';
-import { RoomResolverChain } from './RoomResolverChain';
-import { TikRecResolver } from './resolvers/TikRecResolver';
-import { EulerResolver } from './resolvers/EulerResolver';
-import { WebcastResolver } from './resolvers/WebcastResolver';
+// src/client/TikTokAPI.ts
 import { LiveNotFoundError, UserNotLiveError } from '../errors/errors';
 import { logger } from '../utils/logger';
 
-interface RoomAliveResponse {
-  data?: Array<{
-    alive?: boolean;
-  }>;
-}
+import { EulerResolver } from './resolvers/EulerResolver';
+import { TikRecResolver } from './resolvers/TikRecResolver';
+import { WebcastResolver } from './resolvers/WebcastResolver';
+import { RoomResolverChain } from './RoomResolverChain';
+import { RoomAliveSchema, RoomInfoSchema, WebcastFeedSchema } from './schemas';
 
-interface RoomInfoResponse {
-  data?: {
-    stream_url?: {
-      live_core_sdk_data?: {
-        pull_data?: {
-          stream_data?: string;
-          options?: {
-            qualities?: Array<{
-              sdk_key: string;
-              level: number;
-            }>;
-          };
-        };
-      };
-      flv_pull_url?: {
-        FULL_HD1?: string;
-        HD1?: string;
-        SD2?: string;
-        SD1?: string;
-      };
-      rtmp_pull_url?: string;
-    };
-  };
-  status_code?: number;
-}
+import type { HttpClient } from './HttpClient';
+import type { StreamUrlSchema } from './schemas';
+import type { z } from 'zod';
 
-interface FollowersListResponse {
-  userList?: Array<{
-    user?: {
-      uniqueId?: string;
-    };
-  }>;
-  hasMore?: boolean;
-  cursor?: number;
-  minCursor?: number;
-}
+type StreamUrlData = z.infer<typeof StreamUrlSchema>;
 
 export class TikTokAPI {
   private readonly BASE = 'https://www.tiktok.com';
@@ -64,83 +29,95 @@ export class TikTokAPI {
 
   async isRoomAlive(roomId: string): Promise<boolean> {
     try {
-      const data = await this.http.get<RoomAliveResponse>(
-        `${this.WEBCAST}/webcast/room/check_alive/?aid=1988&region=CH&room_ids=${roomId}&user_is_login=true`
+      const data = await this.http.get(
+        `${this.WEBCAST}/webcast/room/check_alive/?aid=1988&room_ids=${roomId}&user_is_login=true`,
+        { schema: RoomAliveSchema },
       );
-
-      const isAlive = Boolean(data?.data?.[0]?.alive);
-      logger.debug({ roomId, isAlive }, 'Room alive check completed');
-      
-      return isAlive;
+      return Boolean(data.data?.[0]?.alive);
     } catch (err) {
       logger.error({ err, roomId }, 'Failed to check if room is alive');
       return false;
     }
   }
 
-  async getLiveStreamUrl(roomId: string): Promise<string> {
-    logger.info({ roomId }, 'Fetching live stream URL');
+  /**
+   * Extracts and sorts stream URLs from the SDK data payload.
+   */
+  private extractSdkStream(streamUrl: StreamUrlData, qualityPreference: number): string | null {
+    try {
+      const sdkDataStr = streamUrl.live_core_sdk_data?.pull_data?.stream_data;
+      const qualities = streamUrl.live_core_sdk_data?.pull_data?.options?.qualities || [];
 
-    const data = await this.http.get<RoomInfoResponse>(
-      `${this.WEBCAST}/webcast/room/info/?aid=1988&room_id=${roomId}`
-    );
-
-    const streamUrl = data?.data?.stream_url;
-
-    if (!streamUrl) {
-      throw new LiveNotFoundError('Stream URL not found in response');
-    }
-
-    // Try SDK data first (new format)
-    const sdkDataStr = streamUrl.live_core_sdk_data?.pull_data?.stream_data;
-    
-    if (sdkDataStr) {
-      try {
+      if (sdkDataStr && qualities.length > 0) {
         const sdkData = JSON.parse(sdkDataStr).data as Record<string, { main?: { flv?: string } }>;
-        const qualities = streamUrl.live_core_sdk_data?.pull_data?.options?.qualities || [];
-        
         const levelMap = new Map(qualities.map((q) => [q.sdk_key, q.level]));
 
-        let bestLevel = -1;
-        let bestFlv: string | undefined;
+        const streams = Object.entries(sdkData)
+          .map(([key, val]) => ({
+            key,
+            url: val?.main?.flv,
+            level: levelMap.get(key) ?? -1,
+          }))
+          .filter((s): s is { key: string; url: string; level: number } => !!s.url)
+          .sort((a, b) => b.level - a.level);
 
-        for (const [sdkKey, entry] of Object.entries(sdkData)) {
-          const level = levelMap.get(sdkKey) ?? -1;
-          const flv = entry?.main?.flv;
-
-          if (level > bestLevel && flv) {
-            bestLevel = level;
-            bestFlv = flv;
-          }
+        if (streams.length > 0) {
+          const selected = streams[Math.min(qualityPreference, streams.length - 1)];
+          logger.debug({ quality: selected!.key }, 'Selected SDK stream');
+          return selected!.url;
         }
-
-        if (bestFlv) {
-          logger.info({ roomId, url: bestFlv }, 'Found live stream URL (SDK data)');
-          return bestFlv;
-        }
-      } catch (err) {
-        logger.warn({ err }, 'Failed to parse SDK stream data, falling back to legacy URLs');
       }
+    } catch (err) {
+      logger.warn({ err }, 'SDK data parsing failed, falling back to legacy');
+    }
+    return null;
+  }
+
+  /**
+   * Extracts stream URLs from the legacy FLV/RTMP pull fields.
+   */
+  private extractLegacyStream(streamUrl: StreamUrlData, qualityPreference: number): string | null {
+    const flvUrls = (streamUrl.flv_pull_url ?? {}) as Record<string, string>;
+    const candidates = ['FULL_HD1', 'HD1', 'SD2', 'SD1']
+      .map((key) => flvUrls[key])
+      .filter((url): url is string => !!url);
+
+    if (streamUrl.rtmp_pull_url) {
+      candidates.push(streamUrl.rtmp_pull_url);
     }
 
-    // Fallback to legacy format
-    const flvUrls = streamUrl.flv_pull_url;
-    const legacyUrl =
-      flvUrls?.FULL_HD1 ||
-      flvUrls?.HD1 ||
-      flvUrls?.SD2 ||
-      flvUrls?.SD1 ||
-      streamUrl.rtmp_pull_url;
+    if (candidates.length === 0) return null;
 
-    if (!legacyUrl) {
+    const selected = candidates[Math.min(qualityPreference, candidates.length - 1)];
+    logger.debug({ source: 'Legacy' }, 'Selected Legacy stream');
+    return selected!;
+  }
+
+  async getLiveStreamUrl(roomId: string, qualityPreference: number = 0): Promise<string> {
+    logger.info({ roomId, qualityPreference }, 'Fetching live stream URL');
+
+    const data = await this.http.get(
+      `${this.WEBCAST}/webcast/room/info/?aid=1988&room_id=${roomId}`,
+      { schema: RoomInfoSchema },
+    );
+
+    const streamUrl = data.data?.stream_url;
+    if (!streamUrl) {
       if (data.status_code === 4003110) {
-        throw new UserNotLiveError('Live stream is restricted or requires login');
+        throw new UserNotLiveError('Live stream restricted/login required');
       }
-      throw new LiveNotFoundError('Unable to retrieve live stream URL');
+      throw new LiveNotFoundError('Stream URL not found');
     }
 
-    logger.info({ roomId, url: legacyUrl }, 'Found live stream URL (legacy format)');
-    return legacyUrl;
+    // 1. Try SDK (Preferred)
+    const sdkUrl = this.extractSdkStream(streamUrl, qualityPreference);
+    if (sdkUrl) return sdkUrl;
+
+    // 2. Try Legacy
+    const legacyUrl = this.extractLegacyStream(streamUrl, qualityPreference);
+    if (legacyUrl) return legacyUrl;
+
+    throw new LiveNotFoundError('No compatible stream URLs found');
   }
 
   async getRoomIdFromUser(username: string): Promise<string> {
@@ -150,66 +127,33 @@ export class TikTokAPI {
   async getSecUid(): Promise<string | null> {
     try {
       const html = await this.http.get<string>(`${this.BASE}/foryou`);
-      
-      if (typeof html !== 'string') {
-        return null;
-      }
-
-      const match = html.match(/"secUid":"([^"]+)"/);
-      const secUid = match?.[1] || null;
-
-      if (secUid) {
-        logger.debug({ secUid }, 'Successfully retrieved secUid');
-      } else {
-        logger.warn('Failed to extract secUid from response');
-      }
-
-      return secUid;
+      return (typeof html === 'string' && html.match(/"secUid":"([^"]+)"/)?.[1]) || null;
     } catch (err) {
-      logger.error({ err }, 'Failed to get secUid');
+      logger.warn({ err }, 'Failed to get secUid');
       return null;
     }
   }
 
-  async getFollowers(secUid: string): Promise<string[]> {
-    logger.info('Fetching followers list');
+  async getFollowers(_secUid: string): Promise<string[]> {
+    logger.info('Scanning Following Feed...');
+    try {
+      const data = await this.http.get(
+        `${this.WEBCAST}/webcast/feed/?aid=1988&feed_type=1&count=20`,
+        { schema: WebcastFeedSchema },
+      );
 
-    const followers: string[] = [];
-    let cursor = 0;
-    let hasMore = true;
+      const liveUsers = new Set<string>();
+      data.data?.data?.forEach((item) => {
+        const uid = item.data?.user?.unique_id;
+        if (uid) liveUsers.add(uid);
+      });
 
-    while (hasMore) {
-      try {
-        const url =
-          `${this.BASE}/api/user/list/?` +
-          `aid=1988&secUid=${secUid}&count=20&cursor=${cursor}`;
-
-        const data = await this.http.get<FollowersListResponse>(url);
-
-        const userList = data?.userList || [];
-        
-        for (const entry of userList) {
-          const username = entry?.user?.uniqueId;
-          if (username) {
-            followers.push(username);
-          }
-        }
-
-        hasMore = Boolean(data?.hasMore);
-        const newCursor = Number(data?.cursor || data?.minCursor || 0);
-
-        if (newCursor === cursor) {
-          break;
-        }
-
-        cursor = newCursor;
-      } catch (err) {
-        logger.error({ err, cursor }, 'Error fetching followers page');
-        break;
-      }
+      const result = Array.from(liveUsers);
+      logger.info({ count: result.length }, 'Live users found in feed');
+      return result;
+    } catch (err) {
+      logger.error({ err: (err as Error).message }, 'Failed to fetch Webcast Feed');
+      return [];
     }
-
-    logger.info({ count: followers.length }, 'Followers list retrieved');
-    return followers;
   }
 }

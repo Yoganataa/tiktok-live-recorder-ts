@@ -1,6 +1,5 @@
 export class TikTokError extends Error {
   public readonly code?: string;
-
   constructor(message: string, code?: string) {
     super(message);
     this.name = 'TikTokError';
@@ -8,7 +7,6 @@ export class TikTokError extends Error {
     Object.setPrototypeOf(this, TikTokError.prototype);
   }
 }
-
 export class UserNotLiveError extends TikTokError {
   constructor(message: string) {
     super(message, 'USER_NOT_LIVE');
@@ -16,7 +14,6 @@ export class UserNotLiveError extends TikTokError {
     Object.setPrototypeOf(this, UserNotLiveError.prototype);
   }
 }
-
 export class CountryBlockedError extends TikTokError {
   constructor(message: string) {
     super(message, 'COUNTRY_BLOCKED');
@@ -24,7 +21,6 @@ export class CountryBlockedError extends TikTokError {
     Object.setPrototypeOf(this, CountryBlockedError.prototype);
   }
 }
-
 export class LiveNotFoundError extends TikTokError {
   constructor(message: string) {
     super(message, 'LIVE_NOT_FOUND');
@@ -32,7 +28,6 @@ export class LiveNotFoundError extends TikTokError {
     Object.setPrototypeOf(this, LiveNotFoundError.prototype);
   }
 }
-
 export class WAFBlockedError extends TikTokError {
   constructor(message: string) {
     super(message, 'WAF_BLOCKED');

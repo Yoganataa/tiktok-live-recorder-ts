@@ -3,7 +3,6 @@ export enum Mode {
   AUTOMATIC = 'automatic',
   FOLLOWERS = 'followers',
 }
-
 export enum StatusCode {
   OK = 200,
   MOVED = 301,

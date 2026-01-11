@@ -58,14 +58,14 @@ jobs:
           name: Release v${{ steps.curr_version.outputs.version }}
           body: |
             ## Changes in v${{ steps.curr_version.outputs.version }}
-            
+
             ### 📦 Installation
-            
+
             To install this version:
             ```bash
             npm install github:Yoganataa/tiktok-live-recorder-ts#v${{ steps.curr_version.outputs.version }}
             ```
-            
+
             Or in your package.json:
             ```json
             {
@@ -74,9 +74,9 @@ jobs:
               }
             }
             ```
-            
+
             ### ⚠️ Note
-            
+
             This package is only available via GitHub installation.
           draft: false
           prerelease: false
